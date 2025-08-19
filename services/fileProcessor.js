@@ -94,20 +94,65 @@ class FileProcessor {
     try {
       console.log(`Extracting ZIP buffer (${zipBuffer.length} bytes) to ${extractDir}`);
       
-      // Extract ZIP using unzipper's extract method (handles all file types automatically)
+      // Extract ZIP using unzipper's Parse method for better control and error handling
+      const extractedEntries = [];
+      
       await new Promise((resolve, reject) => {
         const stream = require('stream');
         const bufferStream = new stream.PassThrough();
         bufferStream.end(zipBuffer);
         
         bufferStream
-          .pipe(unzipper.Extract({ path: extractDir }))
-          .on('close', resolve)
+          .pipe(unzipper.Parse())
+          .on('entry', async (entry) => {
+            const fileName = entry.path;
+            const type = entry.type; // 'Directory' or 'File'
+            
+            try {
+              if (type === 'File') {
+                // Ensure safe path
+                const safePath = this.sanitizePath(fileName);
+                const fullPath = path.join(extractDir, safePath);
+                
+                // Create directory structure if needed
+                await fs.ensureDir(path.dirname(fullPath));
+                
+                // Extract file
+                const writeStream = fs.createWriteStream(fullPath);
+                entry.pipe(writeStream);
+                
+                await new Promise((fileResolve, fileReject) => {
+                  writeStream.on('close', () => {
+                    extractedEntries.push(fileName);
+                    console.log(`Extracted file: ${fileName}`);
+                    fileResolve();
+                  });
+                  writeStream.on('error', fileReject);
+                  entry.on('error', fileReject);
+                });
+              } else {
+                // Handle directories
+                const safePath = this.sanitizePath(fileName);
+                const fullPath = path.join(extractDir, safePath);
+                await fs.ensureDir(fullPath);
+                console.log(`Created directory: ${fileName}`);
+                entry.autodrain();
+              }
+            } catch (entryError) {
+              console.error(`Error processing entry ${fileName}:`, entryError.message);
+              entry.autodrain(); // Skip this entry and continue
+            }
+          })
+          .on('close', () => {
+            console.log(`Extraction completed. Processed ${extractedEntries.length} files.`);
+            resolve();
+          })
           .on('error', reject);
       });
       
-      // Get list of extracted files for validation and logging
+      // Get list of actually extracted files for validation and logging
       const extractedFiles = await this.getAllFiles(extractDir);
+      console.log(`Found ${extractedFiles.length} files after extraction`);
       
       // Validate each extracted file
       for (const filePath of extractedFiles) {
@@ -131,7 +176,7 @@ class FileProcessor {
         }
       }
       
-      console.log(`Successfully extracted ${extractedFiles.length} files`);
+      console.log(`Successfully validated ${extractedFiles.length} files`);
       return extractedFiles.map(filePath => ({
         path: path.relative(extractDir, filePath),
         fullPath: filePath
