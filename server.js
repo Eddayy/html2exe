@@ -345,7 +345,7 @@ app.get('/api/status/:buildId', async (req, res) => {
 });
 
 // Error handling middleware
-app.use((error, req, res) => {
+app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ error: 'File too large. Maximum size is 50MB.' });
