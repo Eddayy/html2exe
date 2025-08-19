@@ -1,20 +1,21 @@
 # Multi-stage build for HTML2EXE converter
 FROM node:24-alpine AS base
 
-# Install system dependencies
+# Install system dependencies and pnpm
 RUN apk add --no-cache \
     ca-certificates \
     git \
-    bash
+    bash && \
+    npm install -g pnpm
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml* ./
 
 # Install Node.js dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN pnpm install --prod --frozen-lockfile
 
 # Go build stage
 FROM golang:1.25-alpine AS go-builder
@@ -82,4 +83,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 # Start the application
-CMD ["sh", "-c", "npm ci && npm start"]
+CMD ["sh", "-c", "pnpm install && pnpm start"]

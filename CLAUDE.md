@@ -10,13 +10,22 @@ HTML2EXE is a web service that converts HTML/CSS/JavaScript applications into Wi
 
 ```bash
 # Start development server with auto-reload
-npm run dev
+pnpm dev
 
 # Start production server
-npm start
+pnpm start
 
-# Run tests (note: test.js file doesn't exist yet, but script is defined)
-npm test
+# Run tests
+pnpm test
+
+# Install dependencies
+pnpm install
+
+# Build Docker image
+docker build -t html2exe .
+
+# Run with Docker (development with volume mounting)
+docker run -p 3000:3000 -v $(pwd):/app html2exe
 ```
 
 ## Core Architecture
@@ -97,8 +106,9 @@ The system uses `execSync` to run `wails build -platform windows/amd64` with:
 ## Development Notes
 
 ### Testing
-- Test files exist in `test/` directory (test-sample.html, test-sample.zip)
-- `npm test` script defined but test runner not implemented yet
+- Test files exist in `test/` directory (static.zip, react.zip)
+- Jest + Supertest testing framework implemented
+- Run tests with `pnpm test`
 
 ### File Paths
 All file operations use absolute paths. Temporary builds are stored in `temp/{buildId}/` and final executables in `dist/{buildId}/`.

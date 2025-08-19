@@ -372,14 +372,22 @@ async function periodicCleanup() {
   }
 }
 
-// Start cleanup interval (every 15 minutes)
-setInterval(periodicCleanup, 15 * 60 * 1000);
+// Store interval reference for cleanup
+let cleanupInterval;
+
+// Start cleanup interval (every 15 minutes) - only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  cleanupInterval = setInterval(periodicCleanup, 15 * 60 * 1000);
+}
 
 // Graceful shutdown handler
 async function gracefulShutdown(signal) {
   console.log(`Received ${signal}, shutting down gracefully...`);
   
   try {
+    if (cleanupInterval) {
+      clearInterval(cleanupInterval);
+    }
     await fileProcessor.cleanupAll();
     console.log('Cleanup completed');
   } catch (error) {
@@ -393,11 +401,14 @@ async function gracefulShutdown(signal) {
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`HTML2EXE Converter Server running on port ${PORT}`);
-  console.log(`Web interface: http://localhost:${PORT}`);
-  console.log(`API endpoint: http://localhost:${PORT}/api/convert`);
-});
+// Start server only if not in test mode
+let server;
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    console.log(`HTML2EXE Converter Server running on port ${PORT}`);
+    console.log(`Web interface: http://localhost:${PORT}`);
+    console.log(`API endpoint: http://localhost:${PORT}/api/convert`);
+  });
+}
 
-module.exports = app;
+module.exports = { app, server, cleanupInterval };
