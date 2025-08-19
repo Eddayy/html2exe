@@ -255,7 +255,7 @@ class HTML2EXEConverter {
     }
 
     async pollBuildStatus() {
-        const maxAttempts = 60; // 5 minutes maximum
+        const maxAttempts = 100; // 10 minutes maximum (increased for longer builds)
         let attempts = 0;
 
         const poll = async () => {
@@ -263,7 +263,7 @@ class HTML2EXEConverter {
                 attempts++;
                 
                 if (attempts > maxAttempts) {
-                    throw new Error('Build timeout - please try again');
+                    throw new Error('Build timeout - the conversion process is taking longer than expected. Please try again.');
                 }
 
                 const response = await fetch(`/api/status/${this.currentBuildId}`);
@@ -274,25 +274,28 @@ class HTML2EXEConverter {
 
                 const status = await response.json();
 
-                switch (status.status) {
-                    case 'processing':
-                        this.updateProgress(75, 'Building application...', 3);
-                        setTimeout(poll, 5000); // Check again in 5 seconds
-                        break;
-                        
-                    case 'completed':
-                        this.updateProgress(100, 'Build complete!', 4);
-                        setTimeout(() => {
-                            this.showSuccessResult();
-                        }, 1000);
-                        break;
-                        
-                    case 'not_found':
-                        throw new Error('Build not found');
-                        
-                    default:
-                        setTimeout(poll, 3000); // Check again in 3 seconds
-                        break;
+                // Handle new granular phases
+                if (status.phase) {
+                    this.updateProgressFromPhase(status);
+                } else {
+                    // Legacy fallback
+                    this.updateProgressLegacy(status);
+                }
+
+                // Continue polling unless completed or failed
+                if (status.phase === 'completed') {
+                    setTimeout(() => {
+                        this.showSuccessResult();
+                    }, 1000);
+                } else if (status.phase === 'failed') {
+                    const errorMsg = status.error || 'Build failed with unknown error';
+                    this.showErrorResult(errorMsg);
+                } else if (status.phase !== 'not_found') {
+                    // Adjust polling frequency based on phase
+                    const delay = status.phase === 'building' ? 8000 : 4000; // Slower polling during build
+                    setTimeout(poll, delay);
+                } else {
+                    throw new Error('Build not found');
                 }
 
             } catch (error) {
@@ -303,6 +306,55 @@ class HTML2EXEConverter {
 
         // Start polling
         setTimeout(poll, 2000);
+    }
+
+    updateProgressFromPhase(status) {
+        const phaseConfig = {
+            // Step 1: Upload & Process (0-25%)
+            'uploading': { progress: 5, text: 'Uploading files to server...', step: 1 },
+            'extracting': { progress: 15, text: 'Extracting ZIP archive...', step: 1 },
+            'validating': { progress: 25, text: 'Validating content and security...', step: 1 },
+            
+            // Step 2: Setup & Install (25-50%)
+            'generating': { progress: 35, text: 'Creating Electron application...', step: 2 },
+            'installing': { progress: 50, text: 'Installing dependencies...', step: 2 },
+            
+            // Step 3: Build Executable (50-95%)
+            'building': { 
+                progress: 80, 
+                text: status.note || 'Building Windows executable (3-5 minutes)...', 
+                step: 3 
+            },
+            
+            // Step 4: Complete (95-100%)
+            'distributing': { progress: 95, text: 'Preparing download...', step: 4 },
+            'completed': { progress: 100, text: 'Build completed successfully!', step: 4 }
+        };
+
+        const config = phaseConfig[status.phase] || { progress: 50, text: status.description || 'Processing...', step: 2 };
+        
+        // Add time estimate for building phase
+        let displayText = config.text;
+        if (status.phase === 'building' && status.estimatedTime) {
+            displayText += ` (Est. ${status.estimatedTime})`;
+        }
+        
+        this.updateProgress(config.progress, displayText, config.step);
+    }
+
+    updateProgressLegacy(status) {
+        // Legacy support for old status format
+        switch (status.status) {
+            case 'processing':
+                this.updateProgress(75, 'Building application...', 3);
+                break;
+            case 'completed':
+                this.updateProgress(100, 'Build complete!', 4);
+                break;
+            default:
+                this.updateProgress(50, 'Processing...', 2);
+                break;
+        }
     }
 
     updateProgress(percentage, text, step) {
@@ -338,6 +390,70 @@ class HTML2EXEConverter {
         this.validateForm();
     }
 
+    validateForm() {
+        const appName = this.appNameInput.value.trim();
+        const appDescription = this.appDescriptionInput.value.trim();
+        const appWidth = parseInt(this.appWidthInput.value);
+        const appHeight = parseInt(this.appHeightInput.value);
+        
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Validate app name (following npm package naming rules)
+        if (!appName) {
+            isValid = false;
+            errorMessage = 'App name is required';
+        } else if (!/[a-zA-Z0-9]/.test(appName)) {
+            isValid = false;
+            errorMessage = 'App name must contain at least one letter or number';
+        } else if (appName.length > 214) {
+            isValid = false;
+            errorMessage = 'App name must be 214 characters or less';
+        } else if (/^[._]/.test(appName)) {
+            isValid = false;
+            errorMessage = 'App name cannot start with a dot or underscore';
+        } else if (/[A-Z]/.test(appName)) {
+            // Warn but don't block - we'll convert to lowercase
+            this.showFormValidationMessage('App name will be converted to lowercase for compatibility');
+        }
+        
+        // Validate dimensions
+        if (appWidth < 400 || appWidth > 2000) {
+            isValid = false;
+            errorMessage = 'Window width must be between 400 and 2000 pixels';
+        }
+        
+        if (appHeight < 300 || appHeight > 1500) {
+            isValid = false;
+            errorMessage = 'Window height must be between 300 and 1500 pixels';
+        }
+        
+        // Update convert button state
+        this.convertBtn.disabled = !isValid;
+        
+        // Show/hide error message if needed
+        this.showFormValidationMessage(errorMessage);
+        
+        return isValid;
+    }
+
+    showFormValidationMessage(message) {
+        let errorDiv = document.getElementById('formValidationError');
+        
+        if (message) {
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.id = 'formValidationError';
+                errorDiv.className = 'form-validation-error';
+                this.convertBtn.parentNode.insertBefore(errorDiv, this.convertBtn);
+            }
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        } else if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+    }
+
     showProgressSection() {
         this.hideAllSections();
         this.progressSection.style.display = 'block';
@@ -350,12 +466,12 @@ class HTML2EXEConverter {
         this.resultSuccess.style.display = 'block';
         this.resultError.style.display = 'none';
 
-        // Update file info - show both 32-bit and 64-bit versions  
+        // Update file info - show ia32 executable
         const appName = this.appNameInput.value.trim() || 'My App';
         // Sanitize the name for filename display (similar to backend)
         const sanitizedName = appName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        this.fileName.textContent = `${sanitizedName}-ia32.exe & ${sanitizedName}-x64.exe`;
-        this.fileSize.textContent = '~25-50MB each';
+        this.fileName.textContent = `${sanitizedName}-ia32.exe`;
+        this.fileSize.textContent = '~40-80MB';
     }
 
     showErrorResult(message, details = null) {
@@ -517,43 +633,11 @@ class HTML2EXEConverter {
         this.iconPreviewImage.src = '';
     }
 
-    // Utility methods
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    // API health check
-    async checkAPIHealth() {
-        try {
-            const response = await fetch('/api/health');
-            if (response.ok) {
-                const data = await response.json();
-                console.log('API Status:', data.status);
-                return true;
-            }
-        } catch (error) {
-            console.warn('API health check failed:', error);
-        }
-        return false;
-    }
 }
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     const converter = new HTML2EXEConverter();
-    
-    // Check API health on startup
-    converter.checkAPIHealth().then(healthy => {
-        if (!healthy) {
-            console.warn('API may not be available');
-        }
-    });
     
     // Make converter available globally for debugging
     window.converter = converter;

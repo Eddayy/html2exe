@@ -41,7 +41,7 @@
       "fileAssociations": []{{iconConfig}}
     },
     "portable": {
-      "artifactName": "{{productName}}-${arch}.exe",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
       "unicode": false
     },
     "forceCodeSigning": false,

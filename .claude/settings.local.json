@@ -13,7 +13,8 @@
       "WebFetch(domain:www.electron.build)",
       "Bash(git restore:*)",
       "WebFetch(domain:hub.docker.com)",
-      "WebFetch(domain:medium.com)"
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:www.electronjs.org)"
     ],
     "deny": [],
     "ask": []

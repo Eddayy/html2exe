@@ -10,6 +10,49 @@ const { v4: uuidv4 } = require('uuid');
 const fileProcessor = require('./services/fileProcessor');
 const electronBuilder = require('./services/electronBuilder');
 
+// Status tracking
+const buildStatuses = new Map(); // In-memory status tracking
+
+const BUILD_PHASES = {
+  UPLOADING: 'uploading',
+  EXTRACTING: 'extracting', 
+  VALIDATING: 'validating',
+  GENERATING: 'generating',
+  INSTALLING: 'installing',
+  BUILDING: 'building',
+  DISTRIBUTING: 'distributing',
+  COMPLETED: 'completed',
+  FAILED: 'failed'
+};
+
+const PHASE_DESCRIPTIONS = {
+  [BUILD_PHASES.UPLOADING]: 'Uploading files to server',
+  [BUILD_PHASES.EXTRACTING]: 'Extracting ZIP archive',
+  [BUILD_PHASES.VALIDATING]: 'Validating content and security',
+  [BUILD_PHASES.GENERATING]: 'Creating Electron application',
+  [BUILD_PHASES.INSTALLING]: 'Installing dependencies',
+  [BUILD_PHASES.BUILDING]: 'Building Windows executable',
+  [BUILD_PHASES.DISTRIBUTING]: 'Preparing download',
+  [BUILD_PHASES.COMPLETED]: 'Build completed successfully',
+  [BUILD_PHASES.FAILED]: 'Build failed'
+};
+
+function updateBuildStatus(buildId, phase, details = {}) {
+  const status = {
+    buildId,
+    phase,
+    description: PHASE_DESCRIPTIONS[phase],
+    timestamp: new Date().toISOString(),
+    ...details
+  };
+  buildStatuses.set(buildId, status);
+  console.log(`Build ${buildId}: ${phase} - ${status.description}`);
+}
+
+function getBuildStatus(buildId) {
+  return buildStatuses.get(buildId) || null;
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -108,8 +151,42 @@ app.post('/api/convert', upload.fields([
       console.log(`Custom icon provided: ${iconFile.originalname}`);
     }
     
+    // Start asynchronous build process
+    buildProcess(buildId, zipFile, iconFile, req.body).catch(error => {
+      console.error(`Build ${buildId} failed:`, error.message);
+      updateBuildStatus(buildId, BUILD_PHASES.FAILED, { error: error.message });
+    });
+    
+    // Return build ID immediately
+    res.json({
+      success: true,
+      buildId: buildId,
+      message: 'Build started successfully'
+    });
+    
+  } catch (error) {
+    console.error(`Build ${buildId} failed:`, error.message);
+    updateBuildStatus(buildId, BUILD_PHASES.FAILED, { error: error.message });
+    
+    res.status(500).json({
+      error: 'Build failed to start',
+      message: error.message,
+      buildId: buildId
+    });
+  }
+});
+
+// Asynchronous build process
+async function buildProcess(buildId, zipFile, iconFile, config) {
+  try {
+    updateBuildStatus(buildId, BUILD_PHASES.UPLOADING);
+    
     // Process the uploaded ZIP file
+    updateBuildStatus(buildId, BUILD_PHASES.EXTRACTING);
     const tempDir = await fileProcessor.processZipFile(zipFile.buffer, buildId);
+    
+    // Validation is done inside processZipFile, but we track it separately
+    updateBuildStatus(buildId, BUILD_PHASES.VALIDATING);
     
     // Process icon file if provided
     let iconData = null;
@@ -122,23 +199,32 @@ app.post('/api/convert', upload.fields([
     }
     
     // Generate Electron application
-    const electronAppPath = await electronBuilder.createElectronApp(tempDir, buildId, req.body, iconData);
+    updateBuildStatus(buildId, BUILD_PHASES.GENERATING);
+    const electronAppPath = await electronBuilder.createElectronApp(tempDir, buildId, config, iconData);
+    
+    // Installation happens inside createElectronApp, but we track it separately
+    updateBuildStatus(buildId, BUILD_PHASES.INSTALLING);
     
     // Build executable
+    updateBuildStatus(buildId, BUILD_PHASES.BUILDING, { 
+      note: 'This may take 3-5 minutes', 
+      estimatedTime: '5 minutes' 
+    });
     const executablePath = await electronBuilder.buildExecutable(electronAppPath, buildId);
     
-    // Return download info
-    res.json({
-      success: true,
-      buildId: buildId,
-      downloadUrl: `/api/download/${buildId}`,
-      message: 'Conversion completed successfully'
+    // Distribute files
+    updateBuildStatus(buildId, BUILD_PHASES.DISTRIBUTING);
+    
+    // Mark as completed
+    updateBuildStatus(buildId, BUILD_PHASES.COMPLETED, {
+      downloadUrl: `/api/download/${buildId}`
     });
     
     console.log(`Build ${buildId} completed successfully`);
     
   } catch (error) {
     console.error(`Build ${buildId} failed:`, error.message);
+    updateBuildStatus(buildId, BUILD_PHASES.FAILED, { error: error.message });
     
     // Clean up on error
     try {
@@ -146,14 +232,8 @@ app.post('/api/convert', upload.fields([
     } catch (cleanupError) {
       console.error(`Cleanup failed for build ${buildId}:`, cleanupError.message);
     }
-    
-    res.status(500).json({
-      error: 'Conversion failed',
-      message: error.message,
-      buildId: buildId
-    });
   }
-});
+}
 
 // Download endpoint
 app.get('/api/download/:buildId', async (req, res) => {
@@ -164,15 +244,13 @@ app.get('/api/download/:buildId', async (req, res) => {
     
     // Find the executable file
     const files = await fs.readdir(executablePath);
-    const executableFile = files.find(file => 
-      file.endsWith('.exe')
-    );
+    const downloadFile = files.find(file => file.endsWith('ia32.exe'));
     
-    if (!executableFile) {
+    if (!downloadFile) {
       return res.status(404).json({ error: 'Executable not found' });
     }
     
-    const filePath = path.join(executablePath, executableFile);
+    const filePath = path.join(executablePath, downloadFile);
     
     // Check if file exists
     if (!(await fs.pathExists(filePath))) {
@@ -180,7 +258,7 @@ app.get('/api/download/:buildId', async (req, res) => {
     }
     
     // Set appropriate headers
-    res.setHeader('Content-Disposition', `attachment; filename="${executableFile}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadFile}"`);
     res.setHeader('Content-Type', 'application/octet-stream');
     
     // Stream the file
@@ -188,7 +266,7 @@ app.get('/api/download/:buildId', async (req, res) => {
     fileStream.pipe(res);
     
     fileStream.on('end', () => {
-      console.log(`File ${executableFile} downloaded for build ${buildId}`);
+      console.log(`File ${downloadFile} downloaded for build ${buildId}`);
     });
     
     fileStream.on('error', (error) => {
@@ -209,6 +287,15 @@ app.get('/api/status/:buildId', async (req, res) => {
   const { buildId } = req.params;
   
   try {
+    // Get detailed status from memory first
+    const detailedStatus = getBuildStatus(buildId);
+    
+    if (detailedStatus) {
+      res.json(detailedStatus);
+      return;
+    }
+    
+    // Fallback to file system check for legacy compatibility
     const tempDir = path.join(__dirname, 'temp', buildId);
     const distDir = path.join(__dirname, 'dist', buildId);
     
@@ -216,11 +303,26 @@ app.get('/api/status/:buildId', async (req, res) => {
     const distExists = await fs.pathExists(distDir);
     
     if (distExists) {
-      res.json({ status: 'completed', buildId });
+      res.json({ 
+        buildId,
+        phase: BUILD_PHASES.COMPLETED,
+        description: PHASE_DESCRIPTIONS[BUILD_PHASES.COMPLETED],
+        timestamp: new Date().toISOString()
+      });
     } else if (tempExists) {
-      res.json({ status: 'processing', buildId });
+      res.json({ 
+        buildId,
+        phase: BUILD_PHASES.BUILDING,
+        description: PHASE_DESCRIPTIONS[BUILD_PHASES.BUILDING],
+        timestamp: new Date().toISOString()
+      });
     } else {
-      res.json({ status: 'not_found', buildId });
+      res.json({ 
+        buildId,
+        phase: 'not_found',
+        description: 'Build not found',
+        timestamp: new Date().toISOString()
+      });
     }
   } catch (error) {
     res.status(500).json({ error: 'Status check failed', message: error.message });

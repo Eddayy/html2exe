@@ -3,54 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML to Windows EXE Converter</title>
+    <title>HTML2EXE - Convert Web Apps to Windows Executables</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1>HTML2EXE Converter</h1>
-            <p>Convert your HTML/CSS/JS projects into Windows executable files (.exe)</p>
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">⚡</span>
+                    <span class="logo-text">HTML2EXE</span>
+                </div>
+                <p class="subtitle">Convert web applications to Windows executables</p>
+            </div>
         </header>
 
         <main class="main">
             <!-- Upload Section -->
             <section class="upload-section" id="uploadSection">
                 <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📁</div>
-                    <h3>Drop your ZIP file here</h3>
-                    <p>or <button type="button" class="browse-btn" id="browseBtn">browse files</button></p>
+                    <div class="upload-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                    </div>
+                    <h3>Upload ZIP File</h3>
+                    <p>Drag and drop or <button type="button" class="browse-btn" id="browseBtn">choose file</button></p>
                     <input type="file" id="fileInput" accept=".zip" hidden>
                     <div class="upload-requirements">
-                        <small>
-                            • ZIP file containing HTML, CSS, and JS files<br>
-                            • Must include an index.html file<br>
-                            • Maximum file size: 50MB<br>
-                            • Optional: Custom icon (PNG, ICO, JPG - max 5MB)<br>
-                            • Output: Windows executables (32-bit & 64-bit)<br>
-                            • Compatible with all Windows versions (7, 8, 10, 11)
-                        </small>
+                        <div class="requirements-grid">
+                            <div class="requirement">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="req-icon">
+                                    <polyline points="9,11 12,14 22,4"/>
+                                    <path d="m21,6-10,10-4-4"/>
+                                </svg>
+                                <span>HTML, CSS, JS projects</span>
+                            </div>
+                            <div class="requirement">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="req-icon">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14,2 14,8 20,8"/>
+                                </svg>
+                                <span>Maximum 50MB</span>
+                            </div>
+                            <div class="requirement">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="req-icon">
+                                    <rect x="2" y="5" width="20" height="14" rx="2"/>
+                                    <line x1="2" y1="10" x2="22" y2="10"/>
+                                </svg>
+                                <span>Windows compatible</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Configuration Section -->
             <section class="config-section" id="configSection" style="display: none;">
-                <h3>App Configuration</h3>
-                <div class="config-info">
-                    <p>Configure your desktop application settings. These details will appear in Windows file properties and make your app look professional.</p>
+                <div class="section-header">
+                    <h3>Configuration</h3>
+                    <p>Customize your application settings</p>
                 </div>
                 <div class="config-form">
                     <div class="form-group">
                         <label for="appName">Application Name:</label>
-                        <input type="text" id="appName" placeholder="My App" maxlength="50">
-                        <small class="field-help">The display name of your application (exactly as you want it to appear)</small>
+                        <input type="text" id="appName" placeholder="My App" maxlength="214">
+                        <small class="field-help">The display name of your application. Special characters will be cleaned for compatibility.</small>
                     </div>
                     <div class="form-group">
                         <label for="appDescription">Description:</label>
                         <input type="text" id="appDescription" placeholder="A desktop application" maxlength="100">
-                        <small class="field-help">Brief description shown in Windows file properties and Task Manager</small>
+                        <small class="field-help">Brief description shown in file properties and Task Manager</small>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -67,13 +93,13 @@
                     <div class="form-group">
                         <label for="appAuthor">Author:</label>
                         <input type="text" id="appAuthor" placeholder="Your Name" maxlength="50">
-                        <small class="field-help">Your name or username - appears in app credits and copyright notice</small>
+                        <small class="field-help">Your name or username - appears in app credits and copyright</small>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="appVersion">Version:</label>
                             <input type="text" id="appVersion" value="1.0.0" placeholder="1.0.0" maxlength="20">
-                            <small class="field-help">App version number (e.g., 1.0.0, 2.1.3) - shown in Windows file properties</small>
+                            <small class="field-help">App version number (e.g., 1.0.0, 2.1.3) - shown in file properties</small>
                         </div>
                         <div class="form-group">
                             <label for="appWebsite">Website (Optional):</label>
@@ -84,7 +110,7 @@
                     <div class="form-group">
                         <label for="appCompany">Company (Optional):</label>
                         <input type="text" id="appCompany" placeholder="Your Company Name" maxlength="50">
-                        <small class="field-help">Company or organization name - appears as publisher in Windows</small>
+                        <small class="field-help">Company or organization name - appears as publisher</small>
                     </div>
                     
                     <!-- Icon Upload Section -->
@@ -93,16 +119,27 @@
                         <div class="icon-upload-area" id="iconUploadArea">
                             <div class="icon-preview" id="iconPreview" style="display: none;">
                                 <img id="iconPreviewImage" src="" alt="Icon preview">
-                                <button type="button" class="remove-icon-btn" id="removeIconBtn">×</button>
+                                <button type="button" class="remove-icon-btn" id="removeIconBtn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"/>
+                                        <line x1="6" y1="6" x2="18" y2="18"/>
+                                    </svg>
+                                </button>
                             </div>
                             <div class="icon-upload-placeholder" id="iconUploadPlaceholder">
-                                <div class="icon-upload-icon">🖼️</div>
-                                <p>Click to upload icon</p>
-                                <small>PNG, ICO, JPG (256x256 recommended, max 5MB)</small>
+                                <div class="icon-upload-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                        <polyline points="21,15 16,10 5,21"/>
+                                    </svg>
+                                </div>
+                                <p>Upload icon</p>
+                                <small>PNG, ICO, JPG • Max 5MB</small>
                             </div>
                             <input type="file" id="iconFile" accept=".png,.ico,.jpg,.jpeg" hidden>
                         </div>
-                        <small class="field-help">Custom icon for your executable - appears in Windows Explorer, taskbar, and desktop shortcuts</small>
+                        <small class="field-help">Custom icon for your executable</small>
                     </div>
                 </div>
                 <div class="action-buttons">
@@ -113,7 +150,10 @@
 
             <!-- Progress Section -->
             <section class="progress-section" id="progressSection" style="display: none;">
-                <h3>Converting Your Application</h3>
+                <div class="section-header">
+                    <h3>Converting</h3>
+                    <p>Building your Windows executable</p>
+                </div>
                 <div class="progress-container">
                     <div class="progress-bar">
                         <div class="progress-fill" id="progressFill"></div>
@@ -123,15 +163,15 @@
                 <div class="progress-steps">
                     <div class="step active" id="step1">
                         <div class="step-number">1</div>
-                        <div class="step-label">Uploading</div>
+                        <div class="step-label">Upload</div>
                     </div>
                     <div class="step" id="step2">
                         <div class="step-number">2</div>
-                        <div class="step-label">Processing</div>
+                        <div class="step-label">Setup</div>
                     </div>
                     <div class="step" id="step3">
                         <div class="step-number">3</div>
-                        <div class="step-label">Building</div>
+                        <div class="step-label">Build</div>
                     </div>
                     <div class="step" id="step4">
                         <div class="step-number">4</div>
@@ -143,25 +183,40 @@
             <!-- Result Section -->
             <section class="result-section" id="resultSection" style="display: none;">
                 <div class="result-success" id="resultSuccess" style="display: none;">
-                    <div class="success-icon">✅</div>
-                    <h3>Conversion Successful!</h3>
-                    <p>Your Windows executable file has been created successfully.</p>
+                    <div class="success-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22,4 12,14.01 9,11.01"/>
+                        </svg>
+                    </div>
+                    <h3>Success</h3>
+                    <p>Your executable is ready for download</p>
                     <div class="download-info">
                         <div class="file-info" id="fileInfo">
                             <span class="file-name" id="fileName">app.exe</span>
                             <span class="file-size" id="fileSize">~50MB</span>
                         </div>
                         <button type="button" class="btn btn-primary btn-download" id="downloadBtn">
-                            <span class="download-icon">⬇️</span>
-                            Download Windows Executable
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Download
                         </button>
                     </div>
                 </div>
 
                 <div class="result-error" id="resultError" style="display: none;">
-                    <div class="error-icon">❌</div>
-                    <h3>Conversion Failed</h3>
-                    <p id="errorMessage">An error occurred during conversion.</p>
+                    <div class="error-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="15" y1="9" x2="9" y2="15"/>
+                            <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                    </div>
+                    <h3>Failed</h3>
+                    <p id="errorMessage">Conversion could not be completed</p>
                     <div class="error-details" id="errorDetails" style="display: none;">
                         <details>
                             <summary>Error Details</summary>
@@ -177,14 +232,13 @@
         </main>
 
         <footer class="footer">
-            <p>
-                <small>
-                    Powered by <a href="https://electronjs.org" target="_blank">Electron</a> • 
-                    <a href="/api/health" target="_blank">API Status</a> • 
-                    Windows EXE Only • 
-                    Built with HTML2EXE Converter
-                </small>
-            </p>
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="https://electronjs.org" target="_blank">Electron</a>
+                    <a href="/api/health" target="_blank">Status</a>
+                </div>
+                <p class="footer-text">Windows Desktop Converter</p>
+            </div>
         </footer>
     </div>
 

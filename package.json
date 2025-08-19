@@ -17,11 +17,10 @@
     "unzipper": "^0.10.14",
     "fs-extra": "^11.2.0",
     "uuid": "^9.0.1",
-    "path": "^0.12.7",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
     "express-rate-limit": "^7.1.5",
-    "validator": "^13.11.0"
+    "sharp": "^0.33.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",

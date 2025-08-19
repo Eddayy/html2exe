@@ -1,7 +1,6 @@
 const unzipper = require('unzipper');
 const fs = require('fs-extra');
 const path = require('path');
-const validator = require('validator');
 
 class FileProcessor {
   constructor() {
@@ -153,7 +152,7 @@ class FileProcessor {
       
     } catch (error) {
       console.error('ZIP extraction error:', error.message);
-      throw new Error(`ZIP extraction failed: ${error.message}`);
+      throw new Error(`ZIP extraction failed: ${error.message}. Please ensure your ZIP file is valid and not corrupted.`);
     }
   }
 
@@ -208,7 +207,7 @@ class FileProcessor {
       console.log(`Validated ${files.length} files, including ${htmlFiles.length} HTML files`);
       
     } catch (error) {
-      throw new Error(`Content validation failed: ${error.message}`);
+      throw new Error(`Content validation failed: ${error.message}. Ensure your ZIP contains at least one .html file and only allowed file types.`);
     }
   }
 

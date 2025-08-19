@@ -1,6 +1,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const { execSync } = require('child_process');
+const sharp = require('sharp');
 
 class ElectronBuilder {
   constructor() {
@@ -25,17 +26,25 @@ class ElectronBuilder {
 
       // Default configuration
       const userAppName = config.appName || 'My App';
+      const sanitizedName = this.sanitizeAppName(userAppName);
+      
+      // Validate the sanitized name
+      if (!sanitizedName || sanitizedName === 'my-app' && userAppName !== 'My App') {
+        throw new Error(`Invalid app name: "${userAppName}". App names must contain at least one alphanumeric character.`);
+      }
+      
       const appConfig = {
-        appName: this.sanitizeAppName(userAppName),  // Technical name (sanitized)
+        // Sanitized fields that must not be overridden
+        appName: sanitizedName,                       // Technical name (sanitized)
         productName: userAppName,                     // Display name (as user typed)
+        // User-configurable fields
         version: config.version || '1.0.0',
         description: config.description || 'Generated desktop application from HTML',
         author: config.author || 'HTML2EXE Converter',
-        width: config.width || 1200,
-        height: config.height || 800,
+        width: parseInt(config.width) || 1200,
+        height: parseInt(config.height) || 800,
         website: config.website || '',
-        company: config.company || config.author || 'HTML2EXE Converter',
-        ...config
+        company: config.company || config.author || 'HTML2EXE Converter'
       };
 
       // Generate derived properties
@@ -53,7 +62,6 @@ class ElectronBuilder {
 
       // Generate Electron files from templates
       await this.generateMainJs(electronAppDir, appConfig);
-      await this.generatePreloadJs(electronAppDir, appConfig);
       await this.generatePackageJson(electronAppDir, appConfig, iconData);
 
       // Process custom icon if provided
@@ -68,7 +76,7 @@ class ElectronBuilder {
       return electronAppDir;
 
     } catch (error) {
-      throw new Error(`Failed to create Electron app: ${error.message}`);
+      throw new Error(`Failed to create Electron app: ${error.message}. This usually indicates an issue with file permissions or disk space.`);
     }
   }
 
@@ -98,7 +106,7 @@ class ElectronBuilder {
         const output = execSync(buildCommand, {
           cwd: electronAppPath,
           stdio: 'pipe',
-          timeout: 300000, // 5 minutes timeout
+          timeout: 600000, // 10 minutes timeout
           maxBuffer: 1024 * 1024 * 10, // 10MB buffer
           encoding: 'utf8'
         });
@@ -113,7 +121,7 @@ class ElectronBuilder {
         if (buildError.stderr) {
           console.error('Build stderr:', buildError.stderr.toString());
         }
-        throw new Error(`Build command failed: ${buildError.message}`);
+        throw new Error(`Build command failed: ${buildError.message}. This could be due to missing dependencies, Windows build tools not available, or insufficient system resources.`);
       }
 
       // List contents of electron app directory after build
@@ -134,24 +142,10 @@ class ElectronBuilder {
       const builtFiles = await this.findBuiltExecutable(electronAppPath);
       
       if (builtFiles.length === 0) {
-        // Try to find any files in dist directory for debugging
-        const distDir = path.join(electronAppPath, 'dist');
+        // Check for executables in parent dist if local dist fails
         const parentDistDir = path.join(electronAppPath, '..', 'dist');
         
-        console.log('Checking dist directories:');
-        console.log('Local dist:', distDir);
-        console.log('Parent dist:', parentDistDir);
-        
-        if (await fs.pathExists(distDir)) {
-          const allFiles = await this.getAllFilesInDirectory(distDir);
-          console.log('All files in local dist directory:', allFiles);
-        }
-        
         if (await fs.pathExists(parentDistDir)) {
-          const allFiles = await this.getAllFilesInDirectory(parentDistDir);
-          console.log('All files in parent dist directory:', allFiles);
-          
-          // Check if there are executables in the parent dist directory
           const parentBuiltFiles = await this.findBuiltExecutableInDirectory(parentDistDir);
           if (parentBuiltFiles.length > 0) {
             console.log('Found executables in parent dist directory, copying them...');
@@ -166,7 +160,7 @@ class ElectronBuilder {
           }
         }
         
-        throw new Error('No executable files found after build');
+        throw new Error('No executable files found after build. The electron-builder process may have failed silently or the build output was not generated correctly.');
       }
 
       // Copy built files to final output directory
@@ -186,31 +180,6 @@ class ElectronBuilder {
     }
   }
 
-  /**
-   * Get all files in directory recursively (for debugging)
-   * @param {string} dir - Directory to scan
-   * @returns {Array} Array of file paths
-   */
-  async getAllFilesInDirectory(dir) {
-    const files = [];
-    
-    const scan = async (currentDir) => {
-      const entries = await fs.readdir(currentDir, { withFileTypes: true });
-      
-      for (const entry of entries) {
-        const fullPath = path.join(currentDir, entry.name);
-        
-        if (entry.isDirectory()) {
-          await scan(fullPath);
-        } else {
-          files.push(path.relative(dir, fullPath));
-        }
-      }
-    };
-    
-    await scan(dir);
-    return files;
-  }
 
   /**
    * Generate main.js from template
@@ -231,23 +200,6 @@ class ElectronBuilder {
     console.log('Generated main.js');
   }
 
-  /**
-   * Generate preload.js from template
-   * @param {string} electronAppDir - Electron app directory
-   * @param {object} config - App configuration
-   */
-  async generatePreloadJs(electronAppDir, config) {
-    const templatePath = path.join(this.templatesDir, 'preload.js.template');
-    const outputPath = path.join(electronAppDir, 'preload.js');
-
-    let template = await fs.readFile(templatePath, 'utf8');
-    
-    // Replace template variables
-    template = template.replace(/{{appName}}/g, config.appName);
-
-    await fs.writeFile(outputPath, template);
-    console.log('Generated preload.js');
-  }
 
   /**
    * Generate package.json from template
@@ -260,6 +212,7 @@ class ElectronBuilder {
     const outputPath = path.join(electronAppDir, 'package.json');
 
     let template = await fs.readFile(templatePath, 'utf8');
+    
     
     // Replace template variables
     template = template.replace(/{{appName}}/g, config.appName);
@@ -274,7 +227,7 @@ class ElectronBuilder {
     
     // Handle icon configuration
     if (iconData) {
-      template = template.replace(/{{iconConfig}}/g, ',\n      "icon": "app/icon.ico"');
+      template = template.replace(/{{iconConfig}}/g, ',\n      "icon": "app/icon.png"');
     } else {
       template = template.replace(/{{iconConfig}}/g, '');
     }
@@ -284,7 +237,7 @@ class ElectronBuilder {
   }
 
   /**
-   * Process custom icon file
+   * Process custom icon file with automatic resizing
    * @param {string} electronAppDir - Electron app directory
    * @param {object} iconData - Icon file data
    */
@@ -295,14 +248,48 @@ class ElectronBuilder {
       
       const iconPath = path.join(appDir, 'icon.ico');
       
-      // For now, just save the icon as-is
-      // In a production system, you might want to convert PNG/JPG to ICO format
-      await fs.writeFile(iconPath, iconData.buffer);
+      console.log(`Processing custom icon: ${iconData.originalname}`);
       
-      console.log(`Custom icon saved: ${iconData.originalname} -> icon.ico`);
+      // Get image metadata to check current size
+      const imageInfo = await sharp(iconData.buffer).metadata();
+      console.log(`Original image size: ${imageInfo.width}x${imageInfo.height}`);
+      
+      // Determine target size - ensure minimum 256x256 for Electron
+      const minSize = 256;
+      const targetSize = Math.max(minSize, Math.max(imageInfo.width || minSize, imageInfo.height || minSize));
+      
+      // Process the image
+      let processedBuffer;
+      
+      if (imageInfo.width < minSize || imageInfo.height < minSize) {
+        console.log(`Resizing icon from ${imageInfo.width}x${imageInfo.height} to ${targetSize}x${targetSize}`);
+        
+        // Resize image maintaining aspect ratio, then extend with transparent background
+        processedBuffer = await sharp(iconData.buffer)
+          .resize(targetSize, targetSize, {
+            fit: 'contain',
+            background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
+          })
+          .png() // Convert to PNG for better transparency support
+          .toBuffer();
+      } else {
+        console.log(`Icon size is acceptable (${imageInfo.width}x${imageInfo.height}), optimizing...`);
+        
+        // Just optimize the image without resizing
+        processedBuffer = await sharp(iconData.buffer)
+          .png()
+          .toBuffer();
+      }
+      
+      // Save the processed icon as PNG (better for Electron than ICO)
+      const pngIconPath = path.join(appDir, 'icon.png');
+      await fs.writeFile(pngIconPath, processedBuffer);
+      
+      console.log(`Custom icon processed and saved: ${iconData.originalname} -> icon.png (${targetSize}x${targetSize})`);
       
     } catch (error) {
       console.warn('Failed to process custom icon:', error.message);
+      console.warn('Continuing without custom icon...');
       // Don't throw error - just log warning and continue without icon
     }
   }
@@ -398,7 +385,7 @@ class ElectronBuilder {
         
         console.log('Dependencies installed successfully via npm install');
       } catch (npmError) {
-        throw new Error(`Failed to install dependencies: ${npmError.message}`);
+        throw new Error(`Failed to install dependencies: ${npmError.message}. Please check your internet connection and ensure npm is properly configured.`);
       }
     }
   }
@@ -456,26 +443,42 @@ class ElectronBuilder {
   }
 
   /**
-   * Sanitize app name for use in file systems and package names
+   * Sanitize app name for npm package.json name field (follows npm naming rules)
    * @param {string} name - Raw app name
    * @returns {string} Sanitized app name
    */
   sanitizeAppName(name) {
     return name
       .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .substring(0, 50) || 'my-app';
+      .trim()
+      // Replace spaces, underscores with hyphens
+      .replace(/[\s_]+/g, '-')
+      // Remove all characters except lowercase letters, numbers, hyphens, dots
+      .replace(/[^a-z0-9.-]/g, '')
+      // Replace multiple hyphens/dots with single ones
+      .replace(/[-]{2,}/g, '-')
+      .replace(/[.]{2,}/g, '.')
+      // Remove leading/trailing hyphens, dots, or underscores (npm rule)
+      .replace(/^[.-]+|[.-]+$/g, '')
+      // Ensure doesn't start with dot or underscore (npm rule)
+      .replace(/^[._]/, '')
+      // Ensure it doesn't start with numbers (add 'app-' prefix)
+      .replace(/^(\d)/, 'app-$1')
+      // Ensure minimum length and npm-compliant fallback
+      .substring(0, 214) || 'my-app'; // npm max length is 214 chars
   }
 
   /**
-   * Generate app ID from app name
-   * @param {string} appName - Sanitized app name
-   * @returns {string} App ID
+   * Generate app ID from app name (for reverse-domain style identifier)
+   * @param {string} appName - Sanitized app name  
+   * @returns {string} App ID in reverse domain format
    */
   generateAppId(appName) {
-    return appName.replace(/-/g, '');
+    // Convert to reverse domain style (com.html2exe.appname)
+    const cleanName = appName.replace(/[.-]/g, ''); // Remove dots and hyphens
+    // Ensure it starts with a letter for valid identifier
+    const validName = cleanName.match(/^[a-z]/) ? cleanName : `app${cleanName}`;
+    return validName.substring(0, 50); // Keep reasonable length for app ID
   }
 
   /**
@@ -500,56 +503,6 @@ class ElectronBuilder {
     return `Copyright © ${currentYear} ${authorOrCompany}`;
   }
 
-  /**
-   * Clear the cached node_modules directory
-   * Useful for debugging or when dependencies need to be refreshed
-   */
-  async clearCache() {
-    try {
-      if (await fs.pathExists(this.cacheDir)) {
-        await fs.remove(this.cacheDir);
-        console.log('Cache cleared successfully');
-      } else {
-        console.log('No cache to clear');
-      }
-    } catch (error) {
-      console.warn('Failed to clear cache:', error.message);
-    }
-  }
-
-  /**
-   * Get cache status and size
-   * @returns {object} Cache information
-   */
-  async getCacheInfo() {
-    try {
-      const cacheExists = await fs.pathExists(this.nodeModulesCacheDir);
-      if (!cacheExists) {
-        return { exists: false, size: 0 };
-      }
-
-      const stats = await fs.stat(this.nodeModulesCacheDir);
-      const hashFile = path.join(this.cacheDir, 'package-hash.txt');
-      const hashExists = await fs.pathExists(hashFile);
-      
-      return {
-        exists: true,
-        size: stats.size,
-        lastModified: stats.mtime,
-        hasValidHash: hashExists
-      };
-    } catch (error) {
-      return { exists: false, size: 0, error: error.message };
-    }
-  }
-
-  /**
-   * Get available build targets (Windows only)
-   * @returns {Array} Array of available targets
-   */
-  getAvailableTargets() {
-    return ['nsis', 'portable'];
-  }
 }
 
 module.exports = new ElectronBuilder();
