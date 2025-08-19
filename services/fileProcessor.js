@@ -31,6 +31,9 @@ class FileProcessor {
       // Extract ZIP file
       const extractedFiles = await this.extractZipFile(zipBuffer, extractDir);
       
+      // Check for and handle nested folder structure (GitHub-style ZIPs)
+      await this.handleNestedStructure(extractDir);
+      
       // Validate extracted content
       await this.validateExtractedContent(extractDir);
       
@@ -91,63 +94,48 @@ class FileProcessor {
     try {
       console.log(`Extracting ZIP buffer (${zipBuffer.length} bytes) to ${extractDir}`);
       
-      // Use unzipper.Open to extract from buffer
-      const directory = await unzipper.Open.buffer(zipBuffer);
-      const extractedFiles = [];
-      
-      console.log(`ZIP contains ${directory.files.length} entries`);
-      
-      for (const file of directory.files) {
-        console.log(`Processing entry: ${file.path}, type: ${file.type}, size: ${file.uncompressedSize}`);
+      // Extract ZIP using unzipper's extract method (handles all file types automatically)
+      await new Promise((resolve, reject) => {
+        const stream = require('stream');
+        const bufferStream = new stream.PassThrough();
+        bufferStream.end(zipBuffer);
         
-        // Skip directories
-        if (file.type === 'Directory') {
-          console.log(`Skipping directory: ${file.path}`);
-          continue;
-        }
+        bufferStream
+          .pipe(unzipper.Extract({ path: extractDir }))
+          .on('close', resolve)
+          .on('error', reject);
+      });
+      
+      // Get list of extracted files for validation and logging
+      const extractedFiles = await this.getAllFiles(extractDir);
+      
+      // Validate each extracted file
+      for (const filePath of extractedFiles) {
+        const relativePath = path.relative(extractDir, filePath);
+        const safePath = this.sanitizePath(relativePath);
         
         // Validate file path (prevent directory traversal)
-        const safePath = this.sanitizePath(file.path);
         if (!this.isPathSafe(extractDir, safePath)) {
-          throw new Error(`Unsafe path detected: ${file.path}`);
+          throw new Error(`Unsafe path detected: ${relativePath}`);
         }
         
         // Check file size
-        if (file.uncompressedSize > this.maxFileSize) {
-          throw new Error(`File too large: ${file.path} (${file.uncompressedSize} bytes)`);
+        const stats = await fs.stat(filePath);
+        if (stats.size > this.maxFileSize) {
+          throw new Error(`File too large: ${relativePath} (${stats.size} bytes)`);
         }
         
         // Validate file extension
         if (!this.isAllowedFile(safePath)) {
           throw new Error(`File type not allowed: ${safePath}`);
         }
-        
-        // Extract file
-        const outputPath = path.join(extractDir, safePath);
-        const outputDir = path.dirname(outputPath);
-        
-        console.log(`Extracting ${file.path} to ${outputPath}`);
-        
-        // Ensure directory exists
-        await fs.ensureDir(outputDir);
-        
-        // Extract file content
-        const content = await file.buffer();
-        await fs.writeFile(outputPath, content);
-        
-        extractedFiles.push({
-          path: safePath,
-          size: file.uncompressedSize,
-          fullPath: outputPath
-        });
-        
-        console.log(`Successfully extracted: ${file.path}`);
       }
       
-      const totalSize = extractedFiles.reduce((sum, file) => sum + file.size, 0);
-      console.log(`Extracted ${extractedFiles.length} files, total size: ${totalSize} bytes`);
-      
-      return extractedFiles;
+      console.log(`Successfully extracted ${extractedFiles.length} files`);
+      return extractedFiles.map(filePath => ({
+        path: path.relative(extractDir, filePath),
+        fullPath: filePath
+      }));
       
     } catch (error) {
       console.error('ZIP extraction error:', error.message);
@@ -241,6 +229,49 @@ class FileProcessor {
       
     } catch (error) {
       throw new Error(`Failed to validate HTML file ${htmlFilePath}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Handle nested folder structure (common with GitHub ZIP downloads)
+   * If there's only one top-level directory containing all files, flatten the structure
+   * @param {string} extractDir - Directory containing extracted files
+   */
+  async handleNestedStructure(extractDir) {
+    try {
+      const entries = await fs.readdir(extractDir, { withFileTypes: true });
+      
+      // Check if there's only one entry and it's a directory
+      if (entries.length === 1 && entries[0].isDirectory()) {
+        const nestedDir = path.join(extractDir, entries[0].name);
+        console.log(`Detected nested structure in directory: ${entries[0].name}`);
+        
+        // Check if this nested directory contains web files (index.html or other HTML files)
+        const nestedFiles = await this.getAllFiles(nestedDir);
+        const hasHtmlFiles = nestedFiles.some(file => path.extname(file).toLowerCase() === '.html');
+        
+        if (hasHtmlFiles) {
+          console.log('Flattening nested directory structure...');
+          
+          // Move all files from nested directory to extract directory
+          const nestedEntries = await fs.readdir(nestedDir, { withFileTypes: true });
+          
+          for (const entry of nestedEntries) {
+            const sourcePath = path.join(nestedDir, entry.name);
+            const targetPath = path.join(extractDir, entry.name);
+            
+            await fs.move(sourcePath, targetPath);
+            console.log(`Moved ${entry.name} from nested directory to root`);
+          }
+          
+          // Remove the now-empty nested directory
+          await fs.remove(nestedDir);
+          console.log(`Removed empty nested directory: ${entries[0].name}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling nested structure:', error.message);
+      // Don't throw error - this is best-effort optimization
     }
   }
 

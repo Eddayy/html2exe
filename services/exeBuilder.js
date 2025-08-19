@@ -243,6 +243,10 @@ class ExeBuilder {
         name: config.appName,
         outputfilename: config.productName,
         'frontend:dir': 'frontend',
+        'frontend:install': 'npm install',
+        'frontend:build': 'npm run build',
+        'frontend:dev:watcher': 'npm run dev',
+        'frontend:dev:serverUrl': 'auto',
         info: {
           companyName: config.company,
           productVersion: config.version,
@@ -279,7 +283,7 @@ class ExeBuilder {
       mainGoContent = mainGoContent.replace(/Height:\s*\d+/, `Height: ${config.height}`);
       
       // Update embed directive to point to frontend directory (not frontend/dist)
-      mainGoContent = mainGoContent.replace(/\/\/go:embed all:frontend\/dist/, '//go:embed all:frontend');
+      // mainGoContent = mainGoContent.replace(/\/\/go:embed all:frontend\/dist/, '//go:embed all:frontend');
       
       await fs.writeFile(mainGoPath, mainGoContent);
       console.log('Updated main.go with window configuration and embed path');
