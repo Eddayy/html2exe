@@ -216,7 +216,7 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
     
     // Generate Wails application
     updateBuildStatus(buildId, BUILD_PHASES.GENERATING);
-    await exeBuilder.createWailsApp(tempDir, buildId, config, iconData);
+    const wailsAppPath = await exeBuilder.createWailsApp(tempDir, buildId, config, iconData);
     
     // Installation happens inside createWailsApp, but we track it separately
     updateBuildStatus(buildId, BUILD_PHASES.INSTALLING);
@@ -241,6 +241,13 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
   } catch (error) {
     console.error(`Build ${buildId} failed:`, error.message);
     updateBuildStatus(buildId, BUILD_PHASES.FAILED, { error: error.message });
+    
+    // Clean up on build error
+    try {
+      await fileProcessor.cleanup(buildId);
+    } catch (cleanupError) {
+      console.error(`Cleanup failed for build ${buildId}:`, cleanupError.message);
+    }
   }
 }
 
@@ -368,9 +375,9 @@ async function periodicCleanup() {
 // Start cleanup interval (every 15 minutes)
 setInterval(periodicCleanup, 15 * 60 * 1000);
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('Shutting down gracefully...');
+// Graceful shutdown handler
+async function gracefulShutdown(signal) {
+  console.log(`Received ${signal}, shutting down gracefully...`);
   
   try {
     await fileProcessor.cleanupAll();
@@ -380,19 +387,11 @@ process.on('SIGINT', async () => {
   }
   
   process.exit(0);
-});
+}
 
-process.on('SIGTERM', async () => {
-  console.log('Received SIGTERM, shutting down...');
-  
-  try {
-    await fileProcessor.cleanupAll();
-  } catch (error) {
-    console.error('Shutdown cleanup failed:', error.message);
-  }
-  
-  process.exit(0);
-});
+// Register shutdown handlers
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 // Start server
 app.listen(PORT, () => {

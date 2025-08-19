@@ -257,19 +257,16 @@ class FileProcessor {
         console.warn(`Warning: ${htmlFilePath} may not be a valid HTML document`);
       }
       
-      // Check for potentially dangerous content
-      const dangerousPatterns = [
-        /<script[^>]*src=["']https?:\/\/[^"']*["']/gi, // External scripts
-        /javascript:/gi,
-        /on\w+\s*=/gi, // Event handlers
-        /<iframe/gi,
-        /<object/gi,
-        /<embed/gi
+      // Only check for truly dangerous patterns that shouldn't be in desktop apps
+      const suspiciousPatterns = [
+        /eval\s*\(/gi,                           // eval() calls
+        /new\s+Function\s*\(/gi,                 // Function constructor
+        /<script[^>]*src=["']data:/gi,          // data: URLs in scripts
       ];
       
-      for (const pattern of dangerousPatterns) {
+      for (const pattern of suspiciousPatterns) {
         if (pattern.test(content)) {
-          console.warn(`Warning: Potentially unsafe content detected in ${htmlFilePath}`);
+          console.warn(`Warning: Suspicious content detected in ${htmlFilePath} - this may not work properly in desktop app`);
         }
       }
       

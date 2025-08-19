@@ -269,8 +269,8 @@ class HTML2EXEConverter {
 
                 // Continue polling unless completed or failed
                 if (status.phase === 'completed') {
-                    setTimeout(() => {
-                        this.showSuccessResult();
+                    setTimeout(async () => {
+                        await this.showSuccessResult();
                     }, 1000);
                 } else if (status.phase === 'failed') {
                     const errorMsg = status.error || 'Build failed with unknown error';
@@ -442,13 +442,13 @@ class HTML2EXEConverter {
         this.updateProgress(0, 'Preparing...', 1);
     }
 
-    showSuccessResult() {
+    async showSuccessResult() {
         this.hideAllSections();
         this.resultSection.style.display = 'block';
         this.resultSuccess.style.display = 'block';
         this.resultError.style.display = 'none';
 
-        // Update file info - show ia32 executable
+        // Update file info - show executable with dynamic size
         const appName = this.appNameInput.value.trim() || 'My App';
         // Sanitize the name for filename display (similar to backend)
         const sanitizedName = appName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
