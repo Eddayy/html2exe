@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebSearch",
+      "Bash(npm install)",
+      "Bash(zip:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:v2.tauri.app)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "WebFetch(domain:www.electron.build)",
+      "Bash(git restore:*)",
+      "WebFetch(domain:hub.docker.com)",
+      "WebFetch(domain:medium.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

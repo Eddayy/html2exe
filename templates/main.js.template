@@ -1,0 +1,70 @@
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+
+function createWindow() {
+  // Create the browser window
+  const mainWindow = new BrowserWindow({
+    width: {{width}},
+    height: {{height}},
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    icon: path.join(__dirname, 'app', 'icon.ico'), // Optional icon
+    show: false // Don't show until ready-to-show
+  });
+
+  // Load the app
+  mainWindow.loadFile('app/index.html');
+
+  // Show window when ready to prevent visual flash
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
+  // Open DevTools in development
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.openDevTools();
+  }
+}
+
+// This method will be called when Electron has finished initialization
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on('activate', () => {
+    // On macOS, re-create a window when the dock icon is clicked
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+// Quit when all windows are closed, except on macOS
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+// Security: Prevent new window creation
+app.on('web-contents-created', (event, contents) => {
+  contents.on('new-window', (event, navigationUrl) => {
+    event.preventDefault();
+    console.log('Blocked new window creation to:', navigationUrl);
+  });
+});
+
+// Security: Prevent navigation to external URLs
+app.on('web-contents-created', (event, contents) => {
+  contents.on('will-navigate', (event, navigationUrl) => {
+    const parsedUrl = new URL(navigationUrl);
+    
+    if (parsedUrl.origin !== 'file://') {
+      event.preventDefault();
+      console.log('Blocked navigation to:', navigationUrl);
+    }
+  });
+});

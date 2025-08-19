@@ -1,0 +1,50 @@
+{
+  "name": "{{appName}}",
+  "version": "{{version}}",
+  "description": "{{description}}",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:win": "electron-builder --win"
+  },
+  "author": "{{author}}",
+  "homepage": "{{website}}",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.1.3",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.html2exe.{{appId}}",
+    "productName": "{{productName}}",
+    "copyright": "{{copyright}}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules",
+      "!build",
+      "!dist"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["ia32", "x64"]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker",
+      "verifyUpdateCodeSignature": false,
+      "publisherName": "{{company}}",
+      "fileAssociations": []{{iconConfig}}
+    },
+    "portable": {
+      "artifactName": "{{productName}}-${arch}.exe",
+      "unicode": false
+    },
+    "forceCodeSigning": false,
+    "buildDependenciesFromSource": false
+  }
+}

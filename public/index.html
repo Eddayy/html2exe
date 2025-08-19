@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML to Windows EXE Converter</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>HTML2EXE Converter</h1>
+            <p>Convert your HTML/CSS/JS projects into Windows executable files (.exe)</p>
+        </header>
+
+        <main class="main">
+            <!-- Upload Section -->
+            <section class="upload-section" id="uploadSection">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <h3>Drop your ZIP file here</h3>
+                    <p>or <button type="button" class="browse-btn" id="browseBtn">browse files</button></p>
+                    <input type="file" id="fileInput" accept=".zip" hidden>
+                    <div class="upload-requirements">
+                        <small>
+                            • ZIP file containing HTML, CSS, and JS files<br>
+                            • Must include an index.html file<br>
+                            • Maximum file size: 50MB<br>
+                            • Optional: Custom icon (PNG, ICO, JPG - max 5MB)<br>
+                            • Output: Windows executables (32-bit & 64-bit)<br>
+                            • Compatible with all Windows versions (7, 8, 10, 11)
+                        </small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Configuration Section -->
+            <section class="config-section" id="configSection" style="display: none;">
+                <h3>App Configuration</h3>
+                <div class="config-info">
+                    <p>Configure your desktop application settings. These details will appear in Windows file properties and make your app look professional.</p>
+                </div>
+                <div class="config-form">
+                    <div class="form-group">
+                        <label for="appName">Application Name:</label>
+                        <input type="text" id="appName" placeholder="My App" maxlength="50">
+                        <small class="field-help">The display name of your application (exactly as you want it to appear)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="appDescription">Description:</label>
+                        <input type="text" id="appDescription" placeholder="A desktop application" maxlength="100">
+                        <small class="field-help">Brief description shown in Windows file properties and Task Manager</small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="appWidth">Window Width:</label>
+                            <input type="number" id="appWidth" value="1200" min="400" max="2000">
+                            <small class="field-help">Initial window width in pixels</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="appHeight">Window Height:</label>
+                            <input type="number" id="appHeight" value="800" min="300" max="1500">
+                            <small class="field-help">Initial window height in pixels</small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="appAuthor">Author:</label>
+                        <input type="text" id="appAuthor" placeholder="Your Name" maxlength="50">
+                        <small class="field-help">Your name or username - appears in app credits and copyright notice</small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="appVersion">Version:</label>
+                            <input type="text" id="appVersion" value="1.0.0" placeholder="1.0.0" maxlength="20">
+                            <small class="field-help">App version number (e.g., 1.0.0, 2.1.3) - shown in Windows file properties</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="appWebsite">Website (Optional):</label>
+                            <input type="url" id="appWebsite" placeholder="https://yoursite.com" maxlength="100">
+                            <small class="field-help">Your website or project URL for support and information</small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="appCompany">Company (Optional):</label>
+                        <input type="text" id="appCompany" placeholder="Your Company Name" maxlength="50">
+                        <small class="field-help">Company or organization name - appears as publisher in Windows</small>
+                    </div>
+                    
+                    <!-- Icon Upload Section -->
+                    <div class="form-group icon-upload-group">
+                        <label for="iconFile">Application Icon (Optional):</label>
+                        <div class="icon-upload-area" id="iconUploadArea">
+                            <div class="icon-preview" id="iconPreview" style="display: none;">
+                                <img id="iconPreviewImage" src="" alt="Icon preview">
+                                <button type="button" class="remove-icon-btn" id="removeIconBtn">×</button>
+                            </div>
+                            <div class="icon-upload-placeholder" id="iconUploadPlaceholder">
+                                <div class="icon-upload-icon">🖼️</div>
+                                <p>Click to upload icon</p>
+                                <small>PNG, ICO, JPG (256x256 recommended, max 5MB)</small>
+                            </div>
+                            <input type="file" id="iconFile" accept=".png,.ico,.jpg,.jpeg" hidden>
+                        </div>
+                        <small class="field-help">Custom icon for your executable - appears in Windows Explorer, taskbar, and desktop shortcuts</small>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="button" class="btn btn-secondary" id="backBtn">Back</button>
+                    <button type="button" class="btn btn-primary" id="convertBtn">Convert to EXE</button>
+                </div>
+            </section>
+
+            <!-- Progress Section -->
+            <section class="progress-section" id="progressSection" style="display: none;">
+                <h3>Converting Your Application</h3>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Uploading file...</div>
+                </div>
+                <div class="progress-steps">
+                    <div class="step active" id="step1">
+                        <div class="step-number">1</div>
+                        <div class="step-label">Uploading</div>
+                    </div>
+                    <div class="step" id="step2">
+                        <div class="step-number">2</div>
+                        <div class="step-label">Processing</div>
+                    </div>
+                    <div class="step" id="step3">
+                        <div class="step-number">3</div>
+                        <div class="step-label">Building</div>
+                    </div>
+                    <div class="step" id="step4">
+                        <div class="step-number">4</div>
+                        <div class="step-label">Complete</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Result Section -->
+            <section class="result-section" id="resultSection" style="display: none;">
+                <div class="result-success" id="resultSuccess" style="display: none;">
+                    <div class="success-icon">✅</div>
+                    <h3>Conversion Successful!</h3>
+                    <p>Your Windows executable file has been created successfully.</p>
+                    <div class="download-info">
+                        <div class="file-info" id="fileInfo">
+                            <span class="file-name" id="fileName">app.exe</span>
+                            <span class="file-size" id="fileSize">~50MB</span>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-download" id="downloadBtn">
+                            <span class="download-icon">⬇️</span>
+                            Download Windows Executable
+                        </button>
+                    </div>
+                </div>
+
+                <div class="result-error" id="resultError" style="display: none;">
+                    <div class="error-icon">❌</div>
+                    <h3>Conversion Failed</h3>
+                    <p id="errorMessage">An error occurred during conversion.</p>
+                    <div class="error-details" id="errorDetails" style="display: none;">
+                        <details>
+                            <summary>Error Details</summary>
+                            <pre id="errorDetailText"></pre>
+                        </details>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="button" class="btn btn-secondary" id="resetBtn">Convert Another File</button>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>
+                <small>
+                    Powered by <a href="https://electronjs.org" target="_blank">Electron</a> • 
+                    <a href="/api/health" target="_blank">API Status</a> • 
+                    Windows EXE Only • 
+                    Built with HTML2EXE Converter
+                </small>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
