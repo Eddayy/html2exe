@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const cors = require('cors');
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 
 const fileProcessor = require('./services/fileProcessor');
@@ -69,6 +70,22 @@ app.use(helmet({
 
 app.use(cors());
 
+// Rate limiter for convert endpoint - limit resource-intensive conversions
+const convertLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, // Limit each IP to 3 conversion requests per windowMs
+  message: {
+    error: 'Too many conversion requests',
+    message: 'You can only submit 3 conversions per 15 minutes. Please wait before trying again.',
+    retryAfter: Math.ceil(15 * 60 / 60) + ' minutes'
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req, res) => {
+    // Skip rate limiting for health checks or other non-conversion endpoints
+    return req.path !== '/api/convert';
+  }
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: '1mb' }));
@@ -131,7 +148,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Upload and convert endpoint
-app.post('/api/convert', upload.fields([
+app.post('/api/convert', convertLimiter, upload.fields([
   { name: 'zipFile', maxCount: 1 },
   { name: 'iconFile', maxCount: 1 }
 ]), async (req, res) => {
@@ -224,13 +241,6 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
   } catch (error) {
     console.error(`Build ${buildId} failed:`, error.message);
     updateBuildStatus(buildId, BUILD_PHASES.FAILED, { error: error.message });
-    
-    // Clean up on error
-    try {
-      await fileProcessor.cleanup(buildId);
-    } catch (cleanupError) {
-      console.error(`Cleanup failed for build ${buildId}:`, cleanupError.message);
-    }
   }
 }
 

@@ -4,19 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-HTML2EXE Converter is a Node.js web service that converts HTML/CSS/JS projects packaged as ZIP files into Windows executable desktop applications using Electron. The service processes uploaded ZIP files, validates their contents, and builds portable Windows executables.
-
-## Architecture
-
-The application follows a modular architecture:
-
-- **server.js**: Express.js server with REST API endpoints for conversion, download, and status checking
-- **services/fileProcessor.js**: Handles ZIP file extraction, validation, and security checks
-- **services/electronBuilder.js**: Creates Electron applications and builds Windows executables
-- **templates/**: Contains template files for generating Electron app structure
-- **public/**: Static web interface for file uploads
-- **temp/**: Temporary storage for processing (auto-cleaned every 15 minutes)
-- **dist/**: Final executable output directory
+HTML2EXE is a web service that converts HTML/CSS/JavaScript applications into Windows desktop executables using the Wails framework. It provides a web interface for uploading ZIP files and generates native Windows .exe files through an asynchronous build pipeline.
 
 ## Development Commands
 
@@ -27,57 +15,97 @@ npm run dev
 # Start production server
 npm start
 
-# Run tests
+# Run tests (note: test.js file doesn't exist yet, but script is defined)
 npm test
 ```
 
-## Key Features
+## Core Architecture
 
-- ZIP file upload with security validation (50MB limit, file type restrictions)
-- HTML/CSS/JS content extraction and validation
-- Electron app generation from templates with variable substitution
-- Windows executable building (portable .exe format)
-- Automatic cleanup of temporary files
-- Security headers via Helmet (CORS, CSP)
-- Custom icon support (PNG, JPG, ICO formats up to 5MB)
+### Build Pipeline Flow
+The conversion process follows these tracked phases:
+1. **UPLOADING** → **EXTRACTING** → **VALIDATING** → **GENERATING** → **INSTALLING** → **BUILDING** → **DISTRIBUTING** → **COMPLETED**
 
-## Security Measures
+### Key Services
+- **`services/fileProcessor.js`**: ZIP extraction, validation, security checks, and content type detection
+- **`services/exeBuilder.js`**: Wails project creation, Go app configuration, and Windows executable building
 
-The application implements several security layers:
-- File extension blocking for executables (.exe, .bat, .sh, etc.)
-- Path traversal protection during ZIP extraction
-- Content validation for HTML files (warns about external scripts, event handlers)
-- 10MB per-file and 50MB total size limits
-- CORS and CSP headers via Helmet middleware
+### Static vs Dynamic Content Detection
+The system detects content type by checking for `package.json`:
+- **Static content** (no package.json): Files copied directly to `frontend/dist`, wails.json skips npm commands
+- **Node.js projects** (with package.json): Files copied to `frontend`, wails.json includes npm install/build commands
 
-## Template System
+## Wails Integration
 
-Electron applications are generated from templates in `/templates/` with variable substitution:
-- `main.js.template`: Electron main process with security restrictions
-- `package.json.template`: Package configuration with electron-builder settings
-- `preload.js.template`: Preload script for renderer security (referenced but not in current templates/)
+### Project Structure Generated
+```
+temp/{buildId}/wails-app/
+├── main.go              # Go application with window config
+├── wails.json           # Frontend build configuration
+├── frontend/            # User content location
+│   ├── dist/           # Static files (or build output)
+│   └── [user files]    # Original web application
+└── build/              # Icons and build artifacts
+```
 
-## Build Process
-
-1. ZIP file uploaded via POST `/api/convert`
-2. Content extracted to `temp/{buildId}/content/`
-3. Electron app structure created in `temp/{buildId}/electron-app/`
-4. Dependencies installed from cache (optimized - copies cached node_modules instead of running npm install for each build)
-5. Windows executable built via `npm run build` (electron-builder)
-6. Output moved to `dist/{buildId}/` for download
-
-### Node Modules Caching
-
-To optimize build performance, the system uses a shared node_modules cache:
-- First build installs dependencies in `.cache/node_modules/`
-- Subsequent builds copy from cache instead of reinstalling
-- Cache is invalidated when package.json template changes (MD5 hash check)
-- Fallback to npm install if cache copy fails
-- Cache directory is automatically created and managed
+### Build Configuration
+- Uses Wails vanilla template for initialization
+- Targets Windows/amd64 platform exclusively
+- Embeds frontend assets using Go embed directive
+- Processes custom icons to Windows ICO format using Sharp
 
 ## API Endpoints
 
-- `POST /api/convert`: Upload ZIP and optional icon, returns build ID
-- `GET /api/download/{buildId}`: Download generated executable
-- `GET /api/status/{buildId}`: Check build status
-- `GET /api/health`: Health check endpoint
+- `POST /api/convert` - Upload ZIP file with optional config (appName, version, width, height, etc.)
+- `GET /api/status/:buildId` - Real-time build progress tracking
+- `GET /api/download/:buildId` - Download completed executable
+- `GET /api/health` - Service health check
+
+## File Processing Rules
+
+### Security Validations
+- ZIP files limited to 50MB
+- Icon files limited to 5MB
+- Blocked file extensions for security
+- Directory traversal protection
+- Path sanitization for Windows compatibility
+
+### Content Requirements
+- Must contain at least one HTML file
+- Supports nested directory structures
+- Validates file types and content
+
+## System Dependencies
+
+### Required External Tools
+- **Go**: Programming language runtime
+- **Wails CLI**: Desktop application framework (`wails build` command)
+- **Node.js**: >=16.0.0 for server runtime
+
+### Build Process
+The system uses `execSync` to run `wails build -platform windows/amd64` with:
+- 10-minute timeout for builds
+- 10MB output buffer
+- Working directory set to generated Wails app
+
+## Error Handling & Cleanup
+
+- Build status tracking with in-memory Map
+- Automatic cleanup every 15 minutes
+- 2-hour retention for temporary files
+- Graceful shutdown with resource cleanup on process termination
+
+## Development Notes
+
+### Testing
+- Test files exist in `test/` directory (test-sample.html, test-sample.zip)
+- `npm test` script defined but test runner not implemented yet
+
+### File Paths
+All file operations use absolute paths. Temporary builds are stored in `temp/{buildId}/` and final executables in `dist/{buildId}/`.
+
+### Icon Processing
+Custom icons are processed through Sharp.js pipeline:
+1. Resize to 256x256 for ICO conversion
+2. Generate Windows-compatible ICO file
+3. Create 512x512 PNG for app icon
+4. Place in `build/windows/icon.ico` and `build/appicon.png`

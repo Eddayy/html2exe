@@ -55,14 +55,31 @@ class ExeBuilder {
       // Initialize Wails project
       await this.initWailsProject(wailsAppDir, appConfig);
       
-      // Copy user content to frontend directory
+      // Check if content is static files (no package.json) or a Node.js project
       const userContentDir = path.join(buildDir, 'content');
-      const frontendDir = path.join(wailsAppDir, 'frontend');
-      await fs.ensureDir(frontendDir);
-      await fs.copy(userContentDir, frontendDir);
+      const packageJsonPath = path.join(userContentDir, 'package.json');
+      const isStaticContent = !(await fs.pathExists(packageJsonPath));
+
+      if (isStaticContent) {
+        // For static files, copy directly to frontend/dist and skip npm commands
+        const frontendDistDir = path.join(wailsAppDir, 'frontend', 'dist');
+        // Clear existing dist directory to prevent file conflicts
+        await fs.remove(frontendDistDir);
+        await fs.ensureDir(frontendDistDir);
+        await fs.copy(userContentDir, frontendDistDir);
+        console.log('Static content detected - copied directly to frontend/dist');
+      } else {
+        // For Node.js projects, copy to frontend directory as before
+        const frontendDir = path.join(wailsAppDir, 'frontend');
+        // Clear existing frontend directory to prevent file conflicts
+        await fs.remove(frontendDir);
+        await fs.ensureDir(frontendDir);
+        await fs.copy(userContentDir, frontendDir);
+        console.log('Node.js project detected - copied to frontend directory');
+      }
 
       // Update Wails configuration
-      await this.updateWailsConfig(wailsAppDir, appConfig);
+      await this.updateWailsConfig(wailsAppDir, appConfig, isStaticContent);
       
       // Update main.go with window dimensions and embed path
       await this.updateMainGo(wailsAppDir, appConfig);
@@ -229,31 +246,55 @@ class ExeBuilder {
    * Update Wails configuration file
    * @param {string} wailsAppDir - Wails app directory
    * @param {object} config - App configuration
+   * @param {boolean} isStaticContent - Whether content is static files without package.json
    */
-  async updateWailsConfig(wailsAppDir, config) {
+  async updateWailsConfig(wailsAppDir, config, isStaticContent = false) {
     try {
       const configPath = path.join(wailsAppDir, 'wails.json');
       
       // Read existing wails.json
       const wailsConfig = JSON.parse(await fs.readFile(configPath, 'utf8'));
       
-      // Create minimal configuration for static frontend
-      const minimalConfig = {
-        version: wailsConfig.version || '1',
-        name: config.appName,
-        outputfilename: config.productName,
-        'frontend:dir': 'frontend',
-        'frontend:install': 'npm install',
-        'frontend:build': 'npm run build',
-        'frontend:dev:watcher': 'npm run dev',
-        'frontend:dev:serverUrl': 'auto',
-        info: {
-          companyName: config.company,
-          productVersion: config.version,
-          copyright: config.copyright,
-          comments: config.description
-        }
-      };
+      // Create configuration based on content type
+      let minimalConfig;
+      
+      if (isStaticContent) {
+        // For static content - no npm install/build commands
+        minimalConfig = {
+          version: wailsConfig.version || '1',
+          name: config.appName,
+          outputfilename: config.productName,
+          'frontend:dir': 'frontend/dist',
+          'frontend:install': '',
+          'frontend:build': '',
+          'frontend:dev:watcher': '',
+          'frontend:dev:serverUrl': 'auto',
+          info: {
+            companyName: config.company,
+            productVersion: config.version,
+            copyright: config.copyright,
+            comments: config.description
+          }
+        };
+      } else {
+        // For Node.js projects - keep npm commands
+        minimalConfig = {
+          version: wailsConfig.version || '1',
+          name: config.appName,
+          outputfilename: config.productName,
+          'frontend:dir': 'frontend',
+          'frontend:install': 'npm install',
+          'frontend:build': 'npm run build',
+          'frontend:dev:watcher': 'npm run dev',
+          'frontend:dev:serverUrl': 'auto',
+          info: {
+            companyName: config.company,
+            productVersion: config.version,
+            copyright: config.copyright,
+            comments: config.description
+          }
+        };
+      }
       
       // Replace entire config with minimal version
       Object.keys(wailsConfig).forEach(key => delete wailsConfig[key]);
