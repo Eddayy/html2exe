@@ -214,11 +214,11 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
       };
     }
     
-    // Generate Electron application
+    // Generate Wails application
     updateBuildStatus(buildId, BUILD_PHASES.GENERATING);
     const wailsAppPath = await exeBuilder.createWailsApp(tempDir, buildId, config, iconData);
     
-    // Installation happens inside createElectronApp, but we track it separately
+    // Installation happens inside createWailsApp, but we track it separately
     updateBuildStatus(buildId, BUILD_PHASES.INSTALLING);
     
     // Build executable
@@ -338,7 +338,7 @@ app.get('/api/status/:buildId', async (req, res) => {
 });
 
 // Error handling middleware
-app.use((error, req, res, next) => {
+app.use((error, req, res) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ error: 'File too large. Maximum size is 50MB.' });
@@ -351,7 +351,7 @@ app.use((error, req, res, next) => {
 });
 
 // 404 handler
-app.use((req, res) => {
+app.use((_, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 

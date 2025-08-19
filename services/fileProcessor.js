@@ -413,7 +413,7 @@ class FileProcessor {
     if (this.blockedExtensions.includes(ext)) {
       return false;
     }
-    return true
+    return true;
   }
 
   /**

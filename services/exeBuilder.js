@@ -429,7 +429,7 @@ class ExeBuilder {
         if (entry.isFile()) {
           // Check for Windows executable file extensions only
           const ext = path.extname(entry.name).toLowerCase();
-          if (['.exe'].includes(ext)) {
+          if (ext === '.exe') {
             console.log(`Found executable: ${fullPath}`);
             files.push(fullPath);
           }
@@ -485,17 +485,6 @@ class ExeBuilder {
     return validName.substring(0, 50); // Keep reasonable length for app ID
   }
 
-  /**
-   * Generate product name from app name
-   * @param {string} appName - Sanitized app name
-   * @returns {string} Product name
-   */
-  generateProductName(appName) {
-    return appName
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
 
   /**
    * Generate copyright string

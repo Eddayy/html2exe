@@ -311,7 +311,7 @@ class HTML2EXEConverter {
             'validating': { progress: 25, text: 'Validating content and security...', step: 1 },
             
             // Step 2: Setup & Install (25-50%)
-            'generating': { progress: 35, text: 'Creating Electron application...', step: 2 },
+            'generating': { progress: 35, text: 'Creating Wails application...', step: 2 },
             'installing': { progress: 50, text: 'Installing dependencies...', step: 2 },
             
             // Step 3: Build Executable (50-95%)
