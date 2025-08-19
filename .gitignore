@@ -3,3 +3,4 @@ builds/*
 temp/*
 dist/*
 .cache/*
+.pnpm-store/*

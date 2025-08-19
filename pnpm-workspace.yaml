@@ -1,0 +1,11 @@
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
+
+supportedArchitectures:
+  os:
+    - linux
+    - darwin
+  cpu:
+    - x64
+    - arm64

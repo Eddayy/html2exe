@@ -36,13 +36,14 @@ RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
 # Final runtime stage
 FROM node:24-alpine
 
-# Install runtime dependencies
+# Install runtime dependencies and pnpm
 RUN apk add --no-cache \
     ca-certificates \
     git \
     bash \
     gcc \
-    musl-dev
+    musl-dev && \
+    npm install -g pnpm
 
 # Copy Go and Wails from builder stage
 COPY --from=golang:1.25-alpine /usr/local/go /usr/local/go
@@ -83,4 +84,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 # Start the application
-CMD ["sh", "-c", "pnpm install && pnpm start"]
+CMD ["pnpm", "start"]
