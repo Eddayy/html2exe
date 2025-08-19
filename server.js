@@ -165,10 +165,7 @@ app.get('/api/download/:buildId', async (req, res) => {
     // Find the executable file
     const files = await fs.readdir(executablePath);
     const executableFile = files.find(file => 
-      file.endsWith('.exe') || 
-      file.endsWith('.dmg') || 
-      file.endsWith('.deb') ||
-      file.endsWith('.appimage')
+      file.endsWith('.exe')
     );
     
     if (!executableFile) {

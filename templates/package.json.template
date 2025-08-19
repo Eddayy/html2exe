@@ -32,7 +32,7 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["ia32", "x64"]
+          "arch": ["ia32"]
         }
       ],
       "requestedExecutionLevel": "asInvoker",

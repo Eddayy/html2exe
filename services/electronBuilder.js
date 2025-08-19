@@ -337,7 +337,7 @@ class ElectronBuilder {
         await fs.copy(packageJsonPath, path.join(tempDir, 'package.json'));
         
         // Install dependencies in temp directory
-        execSync('npm install --production', {
+        execSync('npm install', {
           cwd: tempDir,
           stdio: 'pipe',
           timeout: 120000 // 2 minutes timeout
