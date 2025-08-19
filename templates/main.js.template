@@ -13,7 +13,7 @@ function createWindow() {
     },
     icon: path.join(__dirname, 'app', 'icon.ico'), // Optional icon
     titleBarStyle: 'hidden', // Hide titlebar controls,
-    titleBarOverLay: true
+    titleBarOverlay: true
   });
 
   // Load the app

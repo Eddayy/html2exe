@@ -15,7 +15,8 @@
       "WebFetch(domain:hub.docker.com)",
       "WebFetch(domain:medium.com)",
       "WebFetch(domain:www.electronjs.org)",
-      "WebFetch(domain:neutralino.js.org)"
+      "WebFetch(domain:neutralino.js.org)",
+      "Bash(rustc --version)"
     ],
     "deny": [],
     "ask": []
