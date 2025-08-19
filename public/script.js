@@ -172,18 +172,6 @@ class HTML2EXEConverter {
             .substring(0, 50);
     }
 
-    validateForm() {
-        const appName = this.appNameInput.value.trim();
-        const width = parseInt(this.appWidthInput.value);
-        const height = parseInt(this.appHeightInput.value);
-
-        const isValid = appName.length > 0 && 
-                       width >= 400 && width <= 2000 &&
-                       height >= 300 && height <= 1500;
-
-        this.convertBtn.disabled = !isValid;
-        return isValid;
-    }
 
     async startConversion() {
         if (!this.currentFile || !this.validateForm()) {

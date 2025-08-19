@@ -452,24 +452,22 @@ class ExeBuilder {
    * @returns {string} Sanitized app name
    */
   sanitizeAppName(name) {
-    return name
+    let sanitized = name
       .toLowerCase()
       .trim()
-      // Replace spaces, underscores with hyphens
-      .replace(/[\s_]+/g, '-')
-      // Remove all characters except lowercase letters, numbers, hyphens, dots
-      .replace(/[^a-z0-9.-]/g, '')
-      // Replace multiple hyphens/dots with single ones
-      .replace(/[-]{2,}/g, '-')
-      .replace(/[.]{2,}/g, '.')
-      // Remove leading/trailing hyphens, dots, or underscores (npm rule)
-      .replace(/^[.-]+|[.-]+$/g, '')
-      // Ensure doesn't start with dot or underscore (npm rule)
-      .replace(/^[._]/, '')
-      // Ensure it doesn't start with numbers (add 'app-' prefix)
-      .replace(/^(\d)/, 'app-$1')
-      // Ensure minimum length and npm-compliant fallback
-      .substring(0, 214) || 'my-app'; // npm max length is 214 chars
+      .replace(/[\s_]+/g, '-')           // spaces/underscores → hyphens  
+      .replace(/[^a-z0-9.-]/g, '')       // keep only letters, numbers, hyphens, dots
+      .replace(/[-]{2,}/g, '-')          // multiple hyphens → single hyphen
+      .replace(/[.]{2,}/g, '.')          // multiple dots → single dot
+      .replace(/^[.-]+|[.-]+$/g, '')     // remove leading/trailing hyphens/dots
+      .substring(0, 214);                // npm max length
+    
+    // Ensure valid start character and fallback
+    if (!sanitized || /^[._\d]/.test(sanitized)) {
+      sanitized = sanitized ? `app-${sanitized}` : 'my-app';
+    }
+    
+    return sanitized;
   }
 
   /**

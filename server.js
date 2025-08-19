@@ -216,7 +216,7 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
     
     // Generate Wails application
     updateBuildStatus(buildId, BUILD_PHASES.GENERATING);
-    const wailsAppPath = await exeBuilder.createWailsApp(tempDir, buildId, config, iconData);
+    await exeBuilder.createWailsApp(tempDir, buildId, config, iconData);
     
     // Installation happens inside createWailsApp, but we track it separately
     updateBuildStatus(buildId, BUILD_PHASES.INSTALLING);
@@ -226,7 +226,7 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
       note: 'This may take 3-5 minutes', 
       estimatedTime: '5 minutes' 
     });
-    const executablePath = await exeBuilder.buildExecutable(wailsAppPath, buildId);
+    await exeBuilder.buildExecutable(wailsAppPath, buildId);
     
     // Distribute files
     updateBuildStatus(buildId, BUILD_PHASES.DISTRIBUTING);

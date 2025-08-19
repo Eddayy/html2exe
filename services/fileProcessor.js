@@ -157,12 +157,13 @@ class FileProcessor {
       // Validate each extracted file
       for (const filePath of extractedFiles) {
         const relativePath = path.relative(extractDir, filePath);
-        const safePath = this.sanitizePath(relativePath);
+        const pathCheck = this.sanitizeAndValidatePath(extractDir, relativePath);
         
         // Validate file path (prevent directory traversal)
-        if (!this.isPathSafe(extractDir, safePath)) {
+        if (!pathCheck.safe) {
           throw new Error(`Unsafe path detected: ${relativePath}`);
         }
+        const safePath = pathCheck.path;
         
         // Check file size
         const stats = await fs.stat(filePath);
@@ -389,7 +390,23 @@ class FileProcessor {
   }
 
   /**
-   * Check if path is safe (no directory traversal)
+   * Sanitize path and validate it's safe (no directory traversal)
+   * @param {string} baseDir - Base directory
+   * @param {string} filePath - File path to sanitize and check
+   * @returns {{safe: boolean, path: string}} Object with safety flag and sanitized path
+   */
+  sanitizeAndValidatePath(baseDir, filePath) {
+    const sanitized = this.sanitizePath(filePath);
+    const resolvedPath = path.resolve(baseDir, sanitized);
+    const resolvedBase = path.resolve(baseDir);
+    
+    const safe = resolvedPath.startsWith(resolvedBase + path.sep) || resolvedPath === resolvedBase;
+    
+    return { safe, path: sanitized };
+  }
+
+  /**
+   * Check if path is safe (no directory traversal) - kept for compatibility
    * @param {string} baseDir - Base directory
    * @param {string} filePath - File path to check
    * @returns {boolean} True if path is safe
