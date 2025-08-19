@@ -7,7 +7,6 @@ class FileProcessor {
     this.tempDir = path.join(__dirname, '..', 'temp');
     this.maxFileSize = 10 * 1024 * 1024; // 10MB per file
     this.maxTotalSize = 50 * 1024 * 1024; // 50MB total
-    this.allowedExtensions = ['.html', '.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
     this.blockedExtensions = ['.exe', '.bat', '.sh', '.cmd', '.scr', '.vbs', '.ps1', '.com', '.pif'];
   }
 
@@ -338,9 +337,7 @@ class FileProcessor {
     if (this.blockedExtensions.includes(ext)) {
       return false;
     }
-    
-    // Allow files with allowed extensions or no extension (directories)
-    return this.allowedExtensions.includes(ext) || !ext;
+    return true
   }
 
   /**
