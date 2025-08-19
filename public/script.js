@@ -291,9 +291,7 @@ class HTML2EXEConverter {
                     const errorMsg = status.error || 'Build failed with unknown error';
                     this.showErrorResult(errorMsg);
                 } else if (status.phase !== 'not_found') {
-                    // Adjust polling frequency based on phase
-                    const delay = status.phase === 'building' ? 8000 : 4000; // Slower polling during build
-                    setTimeout(poll, delay);
+                    setTimeout(poll, 1000);
                 } else {
                     throw new Error('Build not found');
                 }
@@ -470,8 +468,8 @@ class HTML2EXEConverter {
         const appName = this.appNameInput.value.trim() || 'My App';
         // Sanitize the name for filename display (similar to backend)
         const sanitizedName = appName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        this.fileName.textContent = `${sanitizedName}-ia32.exe`;
-        this.fileSize.textContent = '~40-80MB';
+        this.fileName.textContent = `${sanitizedName}.exe`;
+        this.fileSize.textContent = '~10MB';
     }
 
     showErrorResult(message, details = null) {

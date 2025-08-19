@@ -17,7 +17,9 @@
       "WebFetch(domain:www.electronjs.org)",
       "WebFetch(domain:neutralino.js.org)",
       "Bash(rustc --version)",
-      "Bash(cargo install:*)"
+      "Bash(cargo install:*)",
+      "WebFetch(domain:wails.io)",
+      "WebFetch(domain:v3alpha.wails.io)"
     ],
     "deny": [],
     "ask": []

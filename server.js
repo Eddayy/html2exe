@@ -4,11 +4,10 @@ const path = require('path');
 const fs = require('fs-extra');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 
 const fileProcessor = require('./services/fileProcessor');
-const electronBuilder = require('./services/electronBuilder');
+const exeBuilder = require('./services/exeBuilder');
 
 // Status tracking
 const buildStatuses = new Map(); // In-memory status tracking
@@ -29,7 +28,7 @@ const PHASE_DESCRIPTIONS = {
   [BUILD_PHASES.UPLOADING]: 'Uploading files to server',
   [BUILD_PHASES.EXTRACTING]: 'Extracting ZIP archive',
   [BUILD_PHASES.VALIDATING]: 'Validating content and security',
-  [BUILD_PHASES.GENERATING]: 'Creating Electron application',
+  [BUILD_PHASES.GENERATING]: 'Creating Wails application',
   [BUILD_PHASES.INSTALLING]: 'Installing dependencies',
   [BUILD_PHASES.BUILDING]: 'Building Windows executable',
   [BUILD_PHASES.DISTRIBUTING]: 'Preparing download',
@@ -200,7 +199,7 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
     
     // Generate Electron application
     updateBuildStatus(buildId, BUILD_PHASES.GENERATING);
-    const electronAppPath = await electronBuilder.createElectronApp(tempDir, buildId, config, iconData);
+    const wailsAppPath = await exeBuilder.createWailsApp(tempDir, buildId, config, iconData);
     
     // Installation happens inside createElectronApp, but we track it separately
     updateBuildStatus(buildId, BUILD_PHASES.INSTALLING);
@@ -210,7 +209,7 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
       note: 'This may take 3-5 minutes', 
       estimatedTime: '5 minutes' 
     });
-    const executablePath = await electronBuilder.buildExecutable(electronAppPath, buildId);
+    const executablePath = await exeBuilder.buildExecutable(wailsAppPath, buildId);
     
     // Distribute files
     updateBuildStatus(buildId, BUILD_PHASES.DISTRIBUTING);
@@ -241,10 +240,9 @@ app.get('/api/download/:buildId', async (req, res) => {
   
   try {
     const executablePath = path.join(__dirname, 'dist', buildId);
-    
     // Find the executable file
     const files = await fs.readdir(executablePath);
-    const downloadFile = files.find(file => file.endsWith('ia32.exe'));
+    const downloadFile = files.find(file => file.endsWith('.exe'));
     
     if (!downloadFile) {
       return res.status(404).json({ error: 'Executable not found' });
