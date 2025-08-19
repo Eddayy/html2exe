@@ -25,9 +25,7 @@ class HTML2EXEConverter {
         this.appDescriptionInput = document.getElementById('appDescription');
         this.appWidthInput = document.getElementById('appWidth');
         this.appHeightInput = document.getElementById('appHeight');
-        this.appAuthorInput = document.getElementById('appAuthor');
         this.appVersionInput = document.getElementById('appVersion');
-        this.appWebsiteInput = document.getElementById('appWebsite');
         this.appCompanyInput = document.getElementById('appCompany');
 
         // Icon upload elements
@@ -210,15 +208,14 @@ class HTML2EXEConverter {
                 description: this.appDescriptionInput.value.trim(),
                 width: parseInt(this.appWidthInput.value),
                 height: parseInt(this.appHeightInput.value),
-                author: this.appAuthorInput.value.trim(),
                 version: this.appVersionInput.value.trim(),
-                website: this.appWebsiteInput.value.trim(),
                 company: this.appCompanyInput.value.trim()
             };
 
             // Add config to form data
             Object.keys(config).forEach(key => {
-                if (config[key]) {
+                // Send all config values, even empty strings (but not undefined/null)
+                if (config[key] !== undefined && config[key] !== null) {
                     formData.append(key, config[key]);
                 }
             });
@@ -390,7 +387,6 @@ class HTML2EXEConverter {
 
     validateForm() {
         const appName = this.appNameInput.value.trim();
-        const appDescription = this.appDescriptionInput.value.trim();
         const appWidth = parseInt(this.appWidthInput.value);
         const appHeight = parseInt(this.appHeightInput.value);
         
@@ -555,9 +551,7 @@ class HTML2EXEConverter {
         this.appDescriptionInput.value = '';
         this.appWidthInput.value = '1200';
         this.appHeightInput.value = '800';
-        this.appAuthorInput.value = '';
         this.appVersionInput.value = '1.0.0';
-        this.appWebsiteInput.value = '';
         this.appCompanyInput.value = '';
         
         // Reset icon

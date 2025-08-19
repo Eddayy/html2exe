@@ -39,16 +39,14 @@ class ExeBuilder {
         // User-configurable fields
         version: config.version || '1.0.0',
         description: config.description || 'Generated desktop application from HTML',
-        author: config.author || 'HTML2EXE Converter',
         width: parseInt(config.width) || 1200,
         height: parseInt(config.height) || 800,
-        website: config.website || '',
-        company: config.company || config.author || 'HTML2EXE Converter'
+        company: config.company || 'HTML2EXE Converter'
       };
 
       // Generate derived properties
       appConfig.appId = this.generateAppId(appConfig.appName);
-      appConfig.copyright = this.generateCopyright(appConfig.author || appConfig.company);
+      appConfig.copyright = this.generateCopyright(appConfig.company);
 
       console.log(`Creating Wails app for build ${buildId}`);
       console.log(`Technical name: ${appConfig.appName}`);
@@ -241,12 +239,12 @@ class ExeBuilder {
       
       // Create minimal configuration for static frontend
       const minimalConfig = {
-        version: wailsConfig.version || '2',
+        version: wailsConfig.version || '1',
         name: config.appName,
         outputfilename: config.productName,
         'frontend:dir': 'frontend',
         info: {
-          company: config.company,
+          companyName: config.company,
           productVersion: config.version,
           copyright: config.copyright,
           comments: config.description
@@ -456,12 +454,12 @@ class ExeBuilder {
 
   /**
    * Generate copyright string
-   * @param {string} authorOrCompany - Author or company name
+   * @param {string} company - Company name
    * @returns {string} Copyright string
    */
-  generateCopyright(authorOrCompany) {
+  generateCopyright(company) {
     const currentYear = new Date().getFullYear();
-    return `Copyright © ${currentYear} ${authorOrCompany}`;
+    return `Copyright © ${currentYear} ${company}`;
   }
 
 }
