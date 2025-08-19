@@ -1,5 +1,7 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu} = require('electron');
 const path = require('path');
+
+Menu.setApplicationMenu(false);
 
 function createWindow() {
   // Create the browser window
@@ -11,9 +13,7 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false
     },
-    icon: path.join(__dirname, 'app', 'icon.ico'), // Optional icon
-    titleBarStyle: 'hidden', // Hide titlebar controls,
-    titleBarOverlay: true
+    icon: path.join(__dirname, 'app', 'icon.ico') // Optional icon
   });
 
   // Load the app
@@ -25,7 +25,7 @@ function createWindow() {
   });
 
   // Open DevTools in development
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.DEV_TOOL === 'true') {
     mainWindow.webContents.openDevTools();
   }
 }
