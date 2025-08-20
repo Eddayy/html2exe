@@ -242,13 +242,6 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
   } catch (error) {
     console.error(`Build ${buildId} failed:`, error.message);
     updateBuildStatus(buildId, BUILD_PHASES.FAILED, { error: error.message });
-    
-    // Clean up on build error
-    try {
-      await fileProcessor.cleanup(buildId);
-    } catch (cleanupError) {
-      console.error(`Cleanup failed for build ${buildId}:`, cleanupError.message);
-    }
   }
 }
 

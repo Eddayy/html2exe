@@ -17,44 +17,32 @@ class FileProcessor {
    * @returns {string} Path to extracted content directory
    */
   async processZipFile(zipBuffer, buildId) {
-    try {
-      // Validate ZIP buffer
-      this.validateZipBuffer(zipBuffer);
-      
-      // Create build directory
-      const buildDir = path.join(this.tempDir, buildId);
-      await fs.ensureDir(buildDir);
-      
-      const extractDir = path.join(buildDir, 'content');
-      await fs.ensureDir(extractDir);
-      
-      // Extract ZIP file
-      const extractedFiles = await this.extractZipFile(zipBuffer, extractDir);
-      
-      // Check for and handle nested folder structure (GitHub-style ZIPs)
-      await this.handleNestedStructure(extractDir);
-      
-      // Validate extracted content
-      await this.validateExtractedContent(extractDir);
-      
-      // Ensure index.html exists
-      await this.ensureIndexHtml(extractDir);
-      
-      console.log(`Successfully processed ZIP file for build ${buildId}`);
-      console.log(`Extracted ${extractedFiles.length} files`);
-      
-      return buildDir;
-      
-    } catch (error) {
-      // Clean up on error
-      try {
-        await this.cleanup(buildId);
-      } catch (cleanupError) {
-        console.error(`Cleanup failed after processing error: ${cleanupError.message}`);
-      }
-      
-      throw error;
-    }
+    // Validate ZIP buffer
+    this.validateZipBuffer(zipBuffer);
+    
+    // Create build directory
+    const buildDir = path.join(this.tempDir, buildId);
+    await fs.ensureDir(buildDir);
+    
+    const extractDir = path.join(buildDir, 'content');
+    await fs.ensureDir(extractDir);
+    
+    // Extract ZIP file
+    const extractedFiles = await this.extractZipFile(zipBuffer, extractDir);
+    
+    // Check for and handle nested folder structure (GitHub-style ZIPs)
+    await this.handleNestedStructure(extractDir);
+    
+    // Validate extracted content
+    await this.validateExtractedContent(extractDir);
+    
+    // Ensure index.html exists
+    await this.ensureIndexHtml(extractDir);
+    
+    console.log(`Successfully processed ZIP file for build ${buildId}`);
+    console.log(`Extracted ${extractedFiles.length} files`);
+    
+    return buildDir;
   }
 
   /**
@@ -431,76 +419,53 @@ class FileProcessor {
   }
 
   /**
-   * Clean up build directory
-   * @param {string} buildId - Build ID to clean up
+   * Clean up directories based on filter condition
+   * @param {Function|null} filter - Function to determine if directory should be cleaned
+   * @param {string} logContext - Context for logging messages
    */
-  async cleanup(buildId) {
+  async _cleanupDirectories(filter = null, logContext = 'cleanup') {
     try {
-      const buildDir = path.join(this.tempDir, buildId);
+      if (!(await fs.pathExists(this.tempDir))) return;
       
-      if (await fs.pathExists(buildDir)) {
-        await fs.remove(buildDir);
-        console.log(`Cleaned up temp directory for build ${buildId}`);
-      }
+      const entries = await fs.readdir(this.tempDir, { withFileTypes: true });
       
-    } catch (error) {
-      console.error(`Cleanup failed for build ${buildId}:`, error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Periodic cleanup of old builds
-   */
-  async periodicCleanup() {
-    try {
-      const maxAge = 2 * 60 * 60 * 1000; // 2 hours
-      const now = Date.now();
-      
-      // Clean temp directory
-      if (await fs.pathExists(this.tempDir)) {
-        const entries = await fs.readdir(this.tempDir, { withFileTypes: true });
-        
-        for (const entry of entries) {
-          if (entry.isDirectory()) {
-            const dirPath = path.join(this.tempDir, entry.name);
-            const stats = await fs.stat(dirPath);
-            
-            if (now - stats.mtime.getTime() > maxAge) {
-              await fs.remove(dirPath);
-              console.log(`Cleaned up old temp directory: ${entry.name}`);
-            }
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const dirPath = path.join(this.tempDir, entry.name);
+          
+          if (!filter || await filter(dirPath, entry.name)) {
+            await fs.remove(dirPath);
+            console.log(`Cleaned up temp directory: ${entry.name}`);
           }
         }
       }
       
     } catch (error) {
-      console.error('Periodic cleanup failed:', error.message);
+      console.error(`${logContext} failed:`, error.message);
+      if (logContext === 'Cleanup') throw error;
     }
+  }
+
+
+  /**
+   * Periodic cleanup of old builds
+   */
+  async periodicCleanup() {
+    const maxAge = 2 * 60 * 60 * 1000; // 2 hours
+    const now = Date.now();
+    
+    await this._cleanupDirectories(async (dirPath) => {
+      const stats = await fs.stat(dirPath);
+      return now - stats.mtime.getTime() > maxAge;
+    }, 'Periodic cleanup');
   }
 
   /**
    * Clean up all build directories
    */
   async cleanupAll() {
-    try {
-      if (await fs.pathExists(this.tempDir)) {
-        const entries = await fs.readdir(this.tempDir, { withFileTypes: true });
-        
-        for (const entry of entries) {
-          if (entry.isDirectory()) {
-            const dirPath = path.join(this.tempDir, entry.name);
-            await fs.remove(dirPath);
-            console.log(`Cleaned up temp directory: ${entry.name}`);
-          }
-        }
-        
-        console.log('Cleaned up all build directories');
-      }
-      
-    } catch (error) {
-      console.error('Cleanup all failed:', error.message);
-    }
+    await this._cleanupDirectories(null, 'Cleanup all');
+    console.log('Cleaned up all build directories');
   }
 }
 
