@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-HTML2EXE is a web service that converts HTML/CSS/JavaScript applications into Windows desktop executables using the Wails framework. It provides a web interface built with Alpine.js for uploading ZIP files and generates native Windows .exe files through an asynchronous build pipeline.
+HTML2EXE is a web service that converts HTML/CSS/JavaScript applications into Windows desktop executables using the Wails framework. It provides a web interface for uploading ZIP files and generates native Windows .exe files through an asynchronous build pipeline.
 
 ## Development Commands
 

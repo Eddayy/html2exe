@@ -8,7 +8,7 @@
     <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 </head>
 <body>
-    <div class="container" x-data="html2exeApp()" x-cloak>
+    <div class="container" id="app">
         <header class="header">
             <div class="header-content">
                 <div class="logo">
@@ -21,14 +21,8 @@
 
         <main class="main">
             <!-- Upload Section -->
-            <section class="upload-section" x-show="currentSection === 'upload'">
-                <div class="upload-area" 
-                     :class="{ 'dragover': isDragOver }"
-                     @dragenter.prevent="isDragOver = true"
-                     @dragover.prevent
-                     @dragleave.prevent="isDragOver = false"
-                     @drop.prevent="handleDrop($event)"
-                     @click="$refs.fileInput.click()">
+            <section class="upload-section" id="upload-section">
+                <div class="upload-area" id="upload-area">
                     <div class="upload-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -37,8 +31,8 @@
                         </svg>
                     </div>
                     <h3>Upload ZIP File</h3>
-                    <p>Drag and drop or <button type="button" class="browse-btn" @click.stop="$refs.fileInput.click()">choose file</button></p>
-                    <input type="file" x-ref="fileInput" accept=".zip" @change="handleFileSelect($event)" hidden>
+                    <p>Drag and drop or <button type="button" class="browse-btn" id="browse-btn">choose file</button></p>
+                    <input type="file" id="file-input" accept=".zip" hidden>
                     <div class="upload-requirements">
                         <div class="requirements-grid">
                             <div class="requirement">
@@ -68,7 +62,7 @@
             </section>
 
             <!-- Configuration Section -->
-            <section class="config-section" x-show="currentSection === 'config'">
+            <section class="config-section" id="config-section" style="display: none;">
                 <div class="section-header">
                     <h3>Configuration</h3>
                     <p>Customize your application settings</p>
@@ -76,51 +70,51 @@
                 <div class="config-form">
                     <div class="form-group">
                         <label for="appName">Application Name:</label>
-                        <input type="text" x-model="config.appName" placeholder="My App" maxlength="214">
+                        <input type="text" id="app-name" placeholder="My App" maxlength="214">
                         <small class="field-help">The display name of your application. Special characters will be cleaned for compatibility.</small>
                     </div>
                     <div class="form-group">
                         <label for="appDescription">Description:</label>
-                        <input type="text" x-model="config.description" placeholder="A desktop application" maxlength="100">
+                        <input type="text" id="app-description" placeholder="A desktop application" maxlength="100">
                         <small class="field-help">Brief description shown in file properties and Task Manager</small>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="appWidth">Window Width:</label>
-                            <input type="number" x-model.number="config.width" min="400" max="2000">
+                            <input type="number" id="app-width" min="400" max="2000" value="1200">
                             <small class="field-help">Initial window width in pixels</small>
                         </div>
                         <div class="form-group">
                             <label for="appHeight">Window Height:</label>
-                            <input type="number" x-model.number="config.height" min="300" max="1500">
+                            <input type="number" id="app-height" min="300" max="1500" value="800">
                             <small class="field-help">Initial window height in pixels</small>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="appVersion">Version:</label>
-                        <input type="text" x-model="config.version" placeholder="1.0.0" maxlength="20">
+                        <input type="text" id="app-version" placeholder="1.0.0" maxlength="20" value="1.0.0">
                         <small class="field-help">App version number (e.g., 1.0.0, 2.1.3) - shown in file properties</small>
                     </div>
                     <div class="form-group">
                         <label for="appCompany">Company (Optional):</label>
-                        <input type="text" x-model="config.company" placeholder="Your Company Name" maxlength="50">
+                        <input type="text" id="app-company" placeholder="Your Company Name" maxlength="50">
                         <small class="field-help">Company or organization name - appears as publisher</small>
                     </div>
                     
                     <!-- Icon Upload Section -->
                     <div class="form-group icon-upload-group">
                         <label>Application Icon (Optional):</label>
-                        <div class="icon-upload-area" @click="$refs.iconInput.click()">
-                            <div class="icon-preview" x-show="iconPreviewUrl">
-                                <img :src="iconPreviewUrl" alt="Icon preview">
-                                <button type="button" class="remove-icon-btn" @click.stop="removeIcon()">
+                        <div class="icon-upload-area" id="icon-upload-area">
+                            <div class="icon-preview" id="icon-preview" style="display: none;">
+                                <img id="icon-preview-img" alt="Icon preview">
+                                <button type="button" class="remove-icon-btn" id="remove-icon-btn">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <line x1="18" y1="6" x2="6" y2="18"/>
                                         <line x1="6" y1="6" x2="18" y2="18"/>
                                     </svg>
                                 </button>
                             </div>
-                            <div class="icon-upload-placeholder" x-show="!iconPreviewUrl">
+                            <div class="icon-upload-placeholder" id="icon-upload-placeholder">
                                 <div class="icon-upload-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -131,46 +125,48 @@
                                 <p>Upload icon</p>
                                 <small>PNG, ICO, JPG • Max 5MB</small>
                             </div>
-                            <input type="file" x-ref="iconInput" accept=".png,.ico,.jpg,.jpeg" @change="handleIconSelect($event)" hidden>
+                            <input type="file" id="icon-input" accept=".png,.ico,.jpg,.jpeg" hidden>
                         </div>
                         <small class="field-help">Custom icon for your executable</small>
                     </div>
                 </div>
                 <div class="action-buttons">
-                    <button type="button" class="btn btn-secondary" @click="currentSection = 'upload'">Back</button>
-                    <button type="button" class="btn btn-primary" @click="startConversion()" :disabled="!isFormValid">Convert to EXE</button>
+                    <button type="button" class="btn btn-secondary" id="back-btn">Back</button>
+                    <button type="button" class="btn btn-primary" id="convert-btn" disabled>Convert to EXE</button>
                 </div>
             </section>
 
             <!-- Progress Section -->
-            <section class="progress-section" x-show="currentSection === 'progress'">
+            <section class="progress-section" id="progress-section" style="display: none;">
                 <div class="section-header">
                     <h3>Converting</h3>
                     <p>Building your Windows executable</p>
                 </div>
                 <div class="progress-container">
                     <div class="progress-bar">
-                        <div class="progress-fill" :style="`width: ${progress.percentage}%`" :class="{ 'loading-animation': progress.animate }"></div>
+                        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
                     </div>
-                    <div class="progress-text" x-text="progress.text">Uploading file...</div>
+                    <div class="progress-text" id="progress-text">Uploading file...</div>
                 </div>
-                <div class="progress-steps">
-                    <template x-for="(step, index) in progressSteps" :key="index">
-                        <div class="step" 
-                             :class="{ 
-                                'active': progress.step === index + 1, 
-                                'completed': progress.step > index + 1 
-                             }">
-                            <div class="step-number" x-text="index + 1"></div>
-                            <div class="step-label" x-text="step"></div>
-                        </div>
-                    </template>
+                <div class="progress-steps" id="progress-steps">
+                    <div class="step active" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-label">Upload</div>
+                    </div>
+                    <div class="step" data-step="2">
+                        <div class="step-number">2</div>
+                        <div class="step-label">Building</div>
+                    </div>
+                    <div class="step" data-step="3">
+                        <div class="step-number">3</div>
+                        <div class="step-label">Complete</div>
+                    </div>
                 </div>
             </section>
 
             <!-- Result Section -->
-            <section class="result-section" x-show="currentSection === 'result'">
-                <div class="result-success" x-show="result.success">
+            <section class="result-section" id="result-section" style="display: none;">
+                <div class="result-success" id="result-success" style="display: none;">
                     <div class="success-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -182,10 +178,10 @@
                     <br/>
                     <div class="download-info">
                         <div class="file-info">
-                            <span class="file-name" x-text="result.fileName">app.exe</span>
-                            <span class="file-size" x-text="result.fileSize">~50MB</span>
+                            <span class="file-name" id="result-filename">app.exe</span>
+                            <span class="file-size" id="result-filesize">~50MB</span>
                         </div>
-                        <button type="button" class="btn btn-primary btn-download" @click="downloadFile()">
+                        <button type="button" class="btn btn-primary btn-download" id="download-btn">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                 <polyline points="7,10 12,15 17,10"/>
@@ -196,7 +192,7 @@
                     </div>
                 </div>
 
-                <div class="result-error" x-show="result.error">
+                <div class="result-error" id="result-error" style="display: none;">
                     <div class="error-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="10"/>
@@ -205,17 +201,17 @@
                         </svg>
                     </div>
                     <h3>Failed</h3>
-                    <p x-text="result.errorMessage">Conversion could not be completed</p>
-                    <div class="error-details" x-show="result.errorDetails">
+                    <p id="error-message">Conversion could not be completed</p>
+                    <div class="error-details" id="error-details" style="display: none;">
                         <details>
                             <summary>Error Details</summary>
-                            <pre x-text="result.errorDetails"></pre>
+                            <pre id="error-details-text"></pre>
                         </details>
                     </div>
                 </div>
 
                 <div class="action-buttons">
-                    <button type="button" class="btn btn-secondary" @click="reset()">Convert Another File</button>
+                    <button type="button" class="btn btn-secondary" id="reset-btn">Convert Another File</button>
                 </div>
             </section>
         </main>
@@ -232,7 +228,6 @@
     </div>
 
 
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -5,9 +5,6 @@
     box-sizing: border-box;
 }
 
-/* Prevent section flash before Alpine.js loads */
-[x-cloak] { display: none !important; }
-
 /* Minimalist Color System */
 :root {
     --primary: #2563eb;
