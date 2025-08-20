@@ -52,9 +52,9 @@ COPY --from=node-builder --chown=appuser:nodejs /app/node_modules ./node_modules
 COPY --chown=appuser:nodejs . .
 
 # Create minimal directories with Go workspace
-RUN mkdir -p temp dist /home/appuser/go /home/appuser/.cache && \
-    chown -R appuser:nodejs temp dist /home/appuser && \
-    chmod -R 755 temp dist /home/appuser
+RUN mkdir -p temp /home/appuser/go /home/appuser/.cache && \
+    chown -R appuser:nodejs temp /home/appuser && \
+    chmod -R 755 temp /home/appuser
 
 # Clean up unnecessary files (research: remove dev files)
 RUN rm -rf \

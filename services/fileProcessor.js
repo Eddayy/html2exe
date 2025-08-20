@@ -437,16 +437,10 @@ class FileProcessor {
   async cleanup(buildId) {
     try {
       const buildDir = path.join(this.tempDir, buildId);
-      const distDir = path.join(__dirname, '..', 'dist', buildId);
       
       if (await fs.pathExists(buildDir)) {
         await fs.remove(buildDir);
         console.log(`Cleaned up temp directory for build ${buildId}`);
-      }
-      
-      if (await fs.pathExists(distDir)) {
-        await fs.remove(distDir);
-        console.log(`Cleaned up dist directory for build ${buildId}`);
       }
       
     } catch (error) {
@@ -480,24 +474,6 @@ class FileProcessor {
         }
       }
       
-      // Clean dist directory
-      const distDir = path.join(__dirname, '..', 'dist');
-      if (await fs.pathExists(distDir)) {
-        const entries = await fs.readdir(distDir, { withFileTypes: true });
-        
-        for (const entry of entries) {
-          if (entry.isDirectory()) {
-            const dirPath = path.join(distDir, entry.name);
-            const stats = await fs.stat(dirPath);
-            
-            if (now - stats.mtime.getTime() > maxAge) {
-              await fs.remove(dirPath);
-              console.log(`Cleaned up old dist directory: ${entry.name}`);
-            }
-          }
-        }
-      }
-      
     } catch (error) {
       console.error('Periodic cleanup failed:', error.message);
     }
@@ -509,14 +485,17 @@ class FileProcessor {
   async cleanupAll() {
     try {
       if (await fs.pathExists(this.tempDir)) {
-        await fs.remove(this.tempDir);
-        console.log('Cleaned up all temp directories');
-      }
-      
-      const distDir = path.join(__dirname, '..', 'dist');
-      if (await fs.pathExists(distDir)) {
-        await fs.remove(distDir);
-        console.log('Cleaned up all dist directories');
+        const entries = await fs.readdir(this.tempDir, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          if (entry.isDirectory()) {
+            const dirPath = path.join(this.tempDir, entry.name);
+            await fs.remove(dirPath);
+            console.log(`Cleaned up temp directory: ${entry.name}`);
+          }
+        }
+        
+        console.log('Cleaned up all build directories');
       }
       
     } catch (error) {

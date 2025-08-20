@@ -226,14 +226,15 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
       note: 'This may take 3-5 minutes', 
       estimatedTime: '5 minutes' 
     });
-    await exeBuilder.buildExecutable(wailsAppPath, buildId);
+    const buildBinPath = await exeBuilder.buildExecutable(wailsAppPath, buildId);
     
     // Distribute files
     updateBuildStatus(buildId, BUILD_PHASES.DISTRIBUTING);
     
     // Mark as completed
     updateBuildStatus(buildId, BUILD_PHASES.COMPLETED, {
-      downloadUrl: `/api/download/${buildId}`
+      downloadUrl: `/api/download/${buildId}`,
+      buildBinPath: buildBinPath
     });
     
     console.log(`Build ${buildId} completed successfully`);
@@ -256,7 +257,19 @@ app.get('/api/download/:buildId', async (req, res) => {
   const { buildId } = req.params;
   
   try {
-    const executablePath = path.join(__dirname, 'dist', buildId);
+    // Get build status to find the build bin path
+    const buildStatus = getBuildStatus(buildId);
+    
+    if (!buildStatus || buildStatus.phase !== BUILD_PHASES.COMPLETED) {
+      return res.status(404).json({ error: 'Build not completed or not found' });
+    }
+    
+    const executablePath = buildStatus.buildBinPath;
+    
+    if (!executablePath || !(await fs.pathExists(executablePath))) {
+      return res.status(404).json({ error: 'Executable directory not found' });
+    }
+    
     // Find the executable file
     const files = await fs.readdir(executablePath);
     const downloadFile = files.find(file => file.endsWith('.exe'));
@@ -312,25 +325,29 @@ app.get('/api/status/:buildId', async (req, res) => {
     
     // Fallback to file system check for legacy compatibility
     const tempDir = path.join(__dirname, 'temp', buildId);
-    const distDir = path.join(__dirname, 'dist', buildId);
     
     const tempExists = await fs.pathExists(tempDir);
-    const distExists = await fs.pathExists(distDir);
     
-    if (distExists) {
-      res.json({ 
-        buildId,
-        phase: BUILD_PHASES.COMPLETED,
-        description: PHASE_DESCRIPTIONS[BUILD_PHASES.COMPLETED],
-        timestamp: new Date().toISOString()
-      });
-    } else if (tempExists) {
-      res.json({ 
-        buildId,
-        phase: BUILD_PHASES.BUILDING,
-        description: PHASE_DESCRIPTIONS[BUILD_PHASES.BUILDING],
-        timestamp: new Date().toISOString()
-      });
+    if (tempExists) {
+      // Check if build is completed by looking for wails-app/build/bin directory
+      const buildBinDir = path.join(tempDir, 'wails-app', 'build', 'bin');
+      const buildCompleted = await fs.pathExists(buildBinDir);
+      
+      if (buildCompleted) {
+        res.json({ 
+          buildId,
+          phase: BUILD_PHASES.COMPLETED,
+          description: PHASE_DESCRIPTIONS[BUILD_PHASES.COMPLETED],
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.json({ 
+          buildId,
+          phase: BUILD_PHASES.BUILDING,
+          description: PHASE_DESCRIPTIONS[BUILD_PHASES.BUILDING],
+          timestamp: new Date().toISOString()
+        });
+      }
     } else {
       res.json({ 
         buildId,

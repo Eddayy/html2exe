@@ -6,7 +6,6 @@ const sharpIco = require('sharp-ico');
 
 class ExeBuilder {
   constructor() {
-    this.distDir = path.join(__dirname, '..', 'dist');
     this.tempDir = path.join(__dirname, '..', 'temp');
   }
 
@@ -101,14 +100,11 @@ class ExeBuilder {
    * Build executable from Wails app
    * @param {string} wailsAppPath - Path to Wails app directory
    * @param {string} buildId - Unique build identifier
-   * @returns {string} Path to built executable directory
+   * @returns {string} Path to built executable directory (build/bin)
    */
   async buildExecutable(wailsAppPath, buildId) {
     try {
       console.log(`Building executable for build ${buildId}`);
-
-      const outputDir = path.join(this.distDir, buildId);
-      await fs.ensureDir(outputDir);
 
       // Build the application using Wails
       const buildCommand = `wails build -platform windows/amd64`;
@@ -143,50 +139,28 @@ class ExeBuilder {
         const wailsAppContents = await fs.readdir(wailsAppPath);
         console.log('Wails app directory contents after build:', wailsAppContents);
         
-        const buildPath = path.join(wailsAppPath, 'build', 'bin');
-        if (await fs.pathExists(buildPath)) {
-          const buildContents = await fs.readdir(buildPath);
+        const buildBinPath = path.join(wailsAppPath, 'build', 'bin');
+        if (await fs.pathExists(buildBinPath)) {
+          const buildContents = await fs.readdir(buildBinPath);
           console.log('Build directory contents:', buildContents);
         }
       } catch (listError) {
         console.warn('Failed to list directory contents:', listError.message);
       }
 
-      // Find and move the built executable
-      const builtFiles = await this.findBuiltExecutable(wailsAppPath);
+      // Verify the built executable exists
+      const buildBinDir = path.join(wailsAppPath, 'build', 'bin');
+      const builtFiles = await this.findBuiltExecutableInDirectory(buildBinDir);
       
       if (builtFiles.length === 0) {
-        // Check for executables in build/bin if local search fails
-        const buildBinDir = path.join(wailsAppPath, 'build', 'bin');
-        
-        if (await fs.pathExists(buildBinDir)) {
-          const buildBinFiles = await this.findBuiltExecutableInDirectory(buildBinDir);
-          if (buildBinFiles.length > 0) {
-            console.log('Found executables in build/bin directory, copying them...');
-            for (const file of buildBinFiles) {
-              const fileName = path.basename(file);
-              const destPath = path.join(outputDir, fileName);
-              await fs.copy(file, destPath);
-              console.log(`Copied executable from build/bin: ${fileName}`);
-            }
-            console.log(`Build completed successfully for build ${buildId}`);
-            return outputDir;
-          }
-        }
-        
         throw new Error('No executable files found after build. The Wails build process may have failed silently or the build output was not generated correctly.');
       }
 
-      // Copy built files to final output directory
-      for (const file of builtFiles) {
-        const fileName = path.basename(file);
-        const destPath = path.join(outputDir, fileName);
-        await fs.copy(file, destPath);
-        console.log(`Copied executable: ${fileName}`);
-      }
-
       console.log(`Build completed successfully for build ${buildId}`);
-      return outputDir;
+      console.log(`Executable(s) available in: ${buildBinDir}`);
+      
+      // Return the build/bin directory path instead of copying files
+      return buildBinDir;
 
     } catch (error) {
       console.error(`Build failed for ${buildId}:`, error.message);
