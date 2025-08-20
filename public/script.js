@@ -208,8 +208,8 @@ class HTML2EXEConverter {
                 }
             });
 
-            // Start upload
-            this.updateProgress(25, 'Uploading file...', 1);
+            // Start upload - simplified to just show building phase
+            this.updateProgress(10, 'Starting build...', 1);
 
             const response = await fetch('/api/convert', {
                 method: 'POST',
@@ -225,7 +225,7 @@ class HTML2EXEConverter {
             
             if (result.success) {
                 this.currentBuildId = result.buildId;
-                this.updateProgress(50, 'Processing files...', 2);
+                this.updateProgress(30, 'Build started...', 1);
                 
                 // Poll for completion
                 await this.pollBuildStatus();
@@ -288,30 +288,19 @@ class HTML2EXEConverter {
         };
 
         // Start polling
-        setTimeout(poll, 2000);
+        setTimeout(poll, 1000);
     }
 
     updateProgressFromPhase(status) {
         const phaseConfig = {
-            // Step 1: Upload & Process (0-25%)
-            'uploading': { progress: 5, text: 'Uploading files to server...', step: 1 },
-            'extracting': { progress: 15, text: 'Extracting ZIP archive...', step: 1 },
-            'validating': { progress: 25, text: 'Validating content and security...', step: 1 },
-            
-            // Step 2: Setup & Install (25-50%)
-            'generating': { progress: 35, text: 'Creating Wails application...', step: 2 },
-            'installing': { progress: 50, text: 'Installing dependencies...', step: 2 },
-            
-            // Step 3: Build Executable (50-95%)
             'building': { 
-                progress: 80, 
-                text: status.note || 'Building Windows executable (3-5 minutes)...', 
-                step: 3 
+                progress: 50, 
+                text: status.note || 'Building Windows executable...', 
+                step: 2,
+                animate: true
             },
-            
-            // Step 4: Complete (95-100%)
-            'distributing': { progress: 95, text: 'Preparing download...', step: 4 },
-            'completed': { progress: 100, text: 'Build completed successfully!', step: 4 }
+            'completed': { progress: 100, text: 'Build completed successfully!', step: 3 },
+            'failed': { progress: 0, text: 'Build failed', step: 1 }
         };
 
         const config = phaseConfig[status.phase] || { progress: 50, text: status.description || 'Processing...', step: 2 };
@@ -322,7 +311,7 @@ class HTML2EXEConverter {
             displayText += ` (Est. ${status.estimatedTime})`;
         }
         
-        this.updateProgress(config.progress, displayText, config.step);
+        this.updateProgress(config.progress, displayText, config.step, config.animate);
     }
 
     updateProgressLegacy(status) {
@@ -340,13 +329,28 @@ class HTML2EXEConverter {
         }
     }
 
-    updateProgress(percentage, text, step) {
+    updateProgress(percentage, text, step, animate = false) {
         this.progressFill.style.width = `${percentage}%`;
         this.progressText.textContent = text;
 
-        // Update step indicators
+        // Add or remove loading animation class
+        if (animate) {
+            this.progressFill.classList.add('loading-animation');
+        } else {
+            this.progressFill.classList.remove('loading-animation');
+        }
+
+        // Update step indicators - simplified to 3 steps
         Object.keys(this.progressSteps).forEach((key, index) => {
             const stepElement = this.progressSteps[key];
+            
+            // Only show first 3 steps
+            if (index >= 3) {
+                stepElement.style.display = 'none';
+                return;
+            }
+            
+            stepElement.style.display = 'block';
             
             if (index + 1 < step) {
                 stepElement.classList.add('completed');
@@ -439,7 +443,7 @@ class HTML2EXEConverter {
     showProgressSection() {
         this.hideAllSections();
         this.progressSection.style.display = 'block';
-        this.updateProgress(0, 'Preparing...', 1);
+        this.updateProgress(5, 'Preparing...', 1);
     }
 
     async showSuccessResult() {

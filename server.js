@@ -14,25 +14,13 @@ const exeBuilder = require('./services/exeBuilder');
 const buildStatuses = new Map(); // In-memory status tracking
 
 const BUILD_PHASES = {
-  UPLOADING: 'uploading',
-  EXTRACTING: 'extracting', 
-  VALIDATING: 'validating',
-  GENERATING: 'generating',
-  INSTALLING: 'installing',
   BUILDING: 'building',
-  DISTRIBUTING: 'distributing',
   COMPLETED: 'completed',
   FAILED: 'failed'
 };
 
 const PHASE_DESCRIPTIONS = {
-  [BUILD_PHASES.UPLOADING]: 'Uploading files to server',
-  [BUILD_PHASES.EXTRACTING]: 'Extracting ZIP archive',
-  [BUILD_PHASES.VALIDATING]: 'Validating content and security',
-  [BUILD_PHASES.GENERATING]: 'Creating Wails application',
-  [BUILD_PHASES.INSTALLING]: 'Installing dependencies',
-  [BUILD_PHASES.BUILDING]: 'Building Windows executable',
-  [BUILD_PHASES.DISTRIBUTING]: 'Preparing download',
+  [BUILD_PHASES.BUILDING]: 'Building Windows executable...',
   [BUILD_PHASES.COMPLETED]: 'Build completed successfully',
   [BUILD_PHASES.FAILED]: 'Build failed'
 };
@@ -195,14 +183,13 @@ app.post('/api/convert', convertLimiter, upload.fields([
 // Asynchronous build process
 async function buildProcess(buildId, zipFile, iconFile, config) {
   try {
-    updateBuildStatus(buildId, BUILD_PHASES.UPLOADING);
+    updateBuildStatus(buildId, BUILD_PHASES.BUILDING, { 
+      note: 'This may take 3-5 minutes', 
+      estimatedTime: '5 minutes' 
+    });
     
     // Process the uploaded ZIP file
-    updateBuildStatus(buildId, BUILD_PHASES.EXTRACTING);
     const tempDir = await fileProcessor.processZipFile(zipFile.buffer, buildId);
-    
-    // Validation is done inside processZipFile, but we track it separately
-    updateBuildStatus(buildId, BUILD_PHASES.VALIDATING);
     
     // Process icon file if provided
     let iconData = null;
@@ -215,21 +202,10 @@ async function buildProcess(buildId, zipFile, iconFile, config) {
     }
     
     // Generate Wails application
-    updateBuildStatus(buildId, BUILD_PHASES.GENERATING);
     const wailsAppPath = await exeBuilder.createWailsApp(tempDir, buildId, config, iconData);
     
-    // Installation happens inside createWailsApp, but we track it separately
-    updateBuildStatus(buildId, BUILD_PHASES.INSTALLING);
-    
     // Build executable
-    updateBuildStatus(buildId, BUILD_PHASES.BUILDING, { 
-      note: 'This may take 3-5 minutes', 
-      estimatedTime: '5 minutes' 
-    });
     const buildBinPath = await exeBuilder.buildExecutable(wailsAppPath, buildId);
-    
-    // Distribute files
-    updateBuildStatus(buildId, BUILD_PHASES.DISTRIBUTING);
     
     // Mark as completed
     updateBuildStatus(buildId, BUILD_PHASES.COMPLETED, {
