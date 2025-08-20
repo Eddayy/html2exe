@@ -1,0 +1,46 @@
+# Optimize build context - exclude unnecessary files
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+README*
+docs/
+examples/
+
+# Development files
+.env*
+.eslintrc*
+.prettierrc*
+jest.config.js
+.vscode/
+.idea/
+
+# Test files
+test/
+tests/
+**/*.test.js
+**/*.spec.js
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+temp/
+dist/
+build/
+
+# Docker files
+Dockerfile*
+docker-compose*
+
+# OS files
+.DS_Store
+Thumbs.db
